@@ -105,7 +105,9 @@ export function start({
       runs.set(id, run);
       const prompt = `${title}\n\n${desc}`.trim();
       const child = spawn("claude",
-        ["-p", prompt, "--model", MODEL_IDS[model], "--permission-mode", "acceptEdits", "--output-format", "json"],
+        ["-p", prompt, "--model", MODEL_IDS[model], "--permission-mode", "acceptEdits", "--output-format", "json",
+         "--append-system-prompt",
+         "You are executing a task from the Agent Ops board. Deliver your work as files in the current working directory — create or edit files rather than only answering in text. Reply with a one-sentence summary of what you created or changed."],
         { cwd, env: RUN_ENV, stdio: ["ignore", "pipe", "pipe"] });
       let out = "";
       let errOut = "";
