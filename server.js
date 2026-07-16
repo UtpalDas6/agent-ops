@@ -31,6 +31,9 @@ export function start({
   };
 
   const server = createServer((req, res) => {
+    const t0 = Date.now();
+    res.on("finish", () =>
+      console.log(`${new Date().toISOString()} ${req.method} ${req.url} ${res.statusCode} ${Date.now() - t0}ms`));
     const { pathname } = new URL(req.url, `http://${req.headers.host || "localhost"}`);
 
     if (req.method === "GET" && (pathname === "/" || pathname === "/index.html")) {
