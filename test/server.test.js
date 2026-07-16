@@ -88,3 +88,16 @@ test("run status 404s for unknown task", async () => {
   const r = await fetch(`${base}/api/run/never-dispatched`);
   assert.equal(r.status, 404);
 });
+
+test("plan rejects a missing brief", async () => {
+  const r = await fetch(`${base}/api/plan`, { method: "POST", body: JSON.stringify({}) });
+  assert.equal(r.status, 400);
+});
+
+test("plan rejects an oversized brief", async () => {
+  const r = await fetch(`${base}/api/plan`, {
+    method: "POST",
+    body: JSON.stringify({ brief: "x".repeat(9000) }),
+  });
+  assert.equal(r.status, 400);
+});

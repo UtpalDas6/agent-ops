@@ -484,6 +484,7 @@
     </select>
     <div class="preview" id="preview"></div>
     <div class="actions">
+      <button type="button" class="ghost" id="aiClassify" style="margin-right:auto">✨ AI classify</button>
       <button type="button" id="cancelBtn">Cancel</button>
       <button type="submit" class="primary" value="ok" id="submitBtn">Add to backlog</button>
     </div>
@@ -497,6 +498,7 @@
     <textarea id="bText" placeholder="Describe the work in plain English — one sentence per task parses best."></textarea>
     <div id="bdList"></div>
     <div class="actions">
+      <button type="button" class="ghost" id="bdAI" style="margin-right:auto">✨ Refine with AI</button>
       <button type="button" id="bdCancel">Cancel</button>
       <button type="submit" class="primary" id="bdAdd" disabled>Add 0 tasks</button>
     </div>
@@ -1042,8 +1044,34 @@
       fModel.value = t.override ? t.model : "auto";
     }
     updatePreview();
+    aiClassify.disabled = !serverMode;
+    aiClassify.textContent = serverMode ? "✨ AI classify" : "✨ AI needs the server";
     dlg.showModal();
   }
+
+  const aiClassify = document.getElementById("aiClassify");
+  aiClassify.onclick = async () => {
+    if (!fTitle.value.trim()) return;
+    aiClassify.disabled = true;
+    aiClassify.textContent = "✨ thinking…";
+    try {
+      const r = await fetch("/api/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief: `${fTitle.value}\n\n${fDesc.value}` }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
+      const t = (await r.json()).tasks[0];
+      fType.value = t.type;
+      fCrit.value = t.crit;
+      updatePreview();
+      aiClassify.textContent = `✨ ${t.type} · ${t.crit}`;
+    } catch {
+      aiClassify.textContent = "✨ failed — retry";
+    } finally {
+      aiClassify.disabled = false;
+    }
+  };
 
   form.addEventListener("input", updatePreview);
   document.getElementById("addBtn").onclick = () => openDialog();
@@ -1102,8 +1130,7 @@
   const bdAdd = document.getElementById("bdAdd");
   let parsed = [];
 
-  function updateBreakdown() {
-    parsed = breakdown(bText.value);
+  function renderParsed() {
     bdList.replaceChildren(...parsed.map((t) => {
       const row = document.createElement("div");
       row.className = "bd-item";
@@ -1116,8 +1143,44 @@
     bdAdd.disabled = !parsed.length;
     bdAdd.textContent = `Add ${parsed.length} task${parsed.length === 1 ? "" : "s"}`;
   }
+  function updateBreakdown() {
+    parsed = breakdown(bText.value);
+    renderParsed();
+  }
   bText.addEventListener("input", updateBreakdown);
-  document.getElementById("bdBtn").onclick = () => { bText.value = ""; updateBreakdown(); bdlg.showModal(); };
+
+  const bdAI = document.getElementById("bdAI");
+  bdAI.onclick = async () => {
+    if (!bText.value.trim()) return;
+    bdAI.disabled = true;
+    bdAI.textContent = "✨ planning…";
+    try {
+      const r = await fetch("/api/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief: bText.value }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
+      const { tasks, usd } = await r.json();
+      parsed = tasks.map((t) => {
+        const tokens = estimate(t.title, t.desc, t.type);
+        return { ...t, tokens, model: assign(tokens, t.crit) };
+      });
+      renderParsed();
+      bdAI.textContent = `✨ AI plan (${usd != null ? fmtUsd(usd) : "done"})`;
+    } catch (e) {
+      bdAI.textContent = "✨ AI failed — retry";
+    } finally {
+      bdAI.disabled = false;
+    }
+  };
+  document.getElementById("bdBtn").onclick = () => {
+    bText.value = "";
+    updateBreakdown();
+    bdAI.disabled = !serverMode;
+    bdAI.textContent = serverMode ? "✨ Refine with AI" : "✨ AI needs the server";
+    bdlg.showModal();
+  };
   document.getElementById("bdCancel").onclick = () => bdlg.close("cancel");
   document.getElementById("bdForm").addEventListener("submit", () => {
     parsed.forEach((t) => {

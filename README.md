@@ -24,8 +24,12 @@ answers all three on one board.
   cumulative spend over time.
 - **Audit trail** — timestamped activity log of every routing decision, agent
   pickup, completion, and budget event.
-- **Natural-language breakdown** — paste a plain-English brief; it splits
-  into tasks, classifies type and criticality, and routes each one.
+- **Natural-language breakdown** — paste a plain-English brief; an LLM
+  planner (`POST /api/plan`, Haiku) splits it into tasks and judges type and
+  criticality by blast radius; the deterministic routing table then assigns
+  models — the LLM understands the work, policy decides the spend. A keyword
+  heuristic covers offline/static use, and the task dialog has one-click
+  AI classification.
 - **Multi-project, search/filters, export/import, five theme skins.**
 
 ## Quickstart
@@ -70,6 +74,7 @@ use, and the server-backed install are the same file.
 | PUT    | `/api/state`   | Replace board state (validated, 2MB cap)  |
 | POST   | `/api/run`     | Dispatch a task to Claude Code (live run)  |
 | GET    | `/api/run/:id` | Live-run status: tokens, cost, summary     |
+| POST   | `/api/plan`    | LLM planner: brief → typed, criticality-rated tasks |
 
 ## Live agent execution
 

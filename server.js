@@ -87,6 +87,51 @@ export function start({
       }
     }
 
+    if (pathname === "/api/plan" && req.method === "POST") {
+      const body = await readJson(req, res);
+      if (body === undefined) return;
+      const brief = typeof body.brief === "string" ? body.brief.trim() : "";
+      if (!brief || brief.length > 8000) return json(res, 400, { error: "brief (1-8000 chars) required" });
+
+      const prompt = `Split this work brief into discrete tasks for LLM agents.
+Respond with ONLY a JSON array, no prose, no markdown fences. Each item:
+{"title": string (max 72 chars, imperative), "desc": string (1-2 sentences of concrete instructions producing a file/artifact where applicable), "type": "chore"|"review"|"writing"|"research"|"code", "crit": "low"|"medium"|"high"|"critical"}
+Judge criticality by blast radius and urgency (outages/security/payments = critical or high; cleanup/nice-to-have = low).
+
+Brief:
+${brief}`;
+      let responded = false;
+      const respond = (code, payload) => { if (!responded) { responded = true; json(res, code, payload); } };
+      const child = spawn("claude", ["-p", prompt, "--model", MODEL_IDS.haiku, "--output-format", "json"],
+        { cwd: dataDir, env: RUN_ENV, stdio: ["ignore", "pipe", "pipe"] });
+      let out = "";
+      child.stdout.on("data", (c) => { out += c; });
+      const timer = setTimeout(() => { child.kill("SIGKILL"); respond(504, { error: "planner timed out" }); }, 60_000);
+      child.on("error", (e) => { clearTimeout(timer); respond(502, { error: `could not launch claude CLI: ${e.message}` }); });
+      child.on("close", () => {
+        clearTimeout(timer);
+        try {
+          const r = JSON.parse(out);
+          const text = String(r.result || "").trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
+          const TYPE_SET = ["chore", "review", "writing", "research", "code"];
+          const CRIT_SET = ["low", "medium", "high", "critical"];
+          const tasks = (JSON.parse(text) || [])
+            .map((t) => ({
+              title: String(t.title || "").slice(0, 90),
+              desc: String(t.desc || t.description || "").slice(0, 500),
+              type: TYPE_SET.includes(t.type) ? t.type : "chore",
+              crit: CRIT_SET.includes(t.crit) ? t.crit : "medium",
+            }))
+            .filter((t) => t.title);
+          if (!tasks.length) return respond(502, { error: "planner returned no tasks" });
+          respond(200, { tasks, usd: r.total_cost_usd });
+        } catch {
+          respond(502, { error: "planner output was not parseable" });
+        }
+      });
+      return;
+    }
+
     if (pathname === "/api/run" && req.method === "POST") {
       const body = await readJson(req, res);
       if (body === undefined) return;
