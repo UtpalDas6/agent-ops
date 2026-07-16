@@ -1,0 +1,1121 @@
+<meta charset="utf-8">
+<title>Agent Ops Board</title>
+<style>
+  /* ---- Skins: every visual decision routes through these tokens ---- */
+  :root { /* clay (neumorphism) */
+    --ground: #e3e7f1;
+    --panel: #e3e7f1;
+    --ink: #39415a;
+    --ink-soft: #7a83a0;
+    --accent: #5b6cff;
+    --surface: #e3e7f1;
+    --surface-border: transparent;
+    --border-w: 1px;
+    --raise: 8px 8px 16px #c3c8d8, -8px -8px 16px #ffffff;
+    --raise-sm: 4px 4px 9px #c3c8d8, -4px -4px 9px #ffffff;
+    --press: inset 4px 4px 8px #c3c8d8, inset -4px -4px 8px #ffffff;
+    --well: inset 6px 6px 14px #c9cedd, inset -6px -6px 14px #ffffff;
+    --well-bg: #e3e7f1;
+    --well-border: transparent;
+    --blur: 0px;
+    --blobs: none;
+    --radius: 18px;
+    --radius-sm: 13px;
+    --chip-radius: 999px;
+    --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --h-transform: none;
+    --chip-alpha: 16%;
+    --crit-low: #3f9e6e;
+    --crit-medium: #c98a1b;
+    --crit-high: #d96a3b;
+    --crit-critical: #cf3f5b;
+    --haiku: #1f9d94;
+    --sonnet: #5b6cff;
+    --opus: #8f5bff;
+    --fable-bg: linear-gradient(100deg, #7c5cff, #d946a0 55%, #38bdf8);
+    --fable: #7c5cff;
+  }
+  :root[data-skin="glass"] {
+    --ground: #0d1120;
+    --panel: #171c30;
+    --ink: #eceff9;
+    --ink-soft: #99a2c1;
+    --accent: #8b98ff;
+    --surface: rgba(255, 255, 255, 0.07);
+    --surface-border: rgba(255, 255, 255, 0.14);
+    --raise: 0 10px 28px rgba(0, 0, 0, 0.38);
+    --raise-sm: 0 4px 14px rgba(0, 0, 0, 0.3);
+    --press: inset 0 2px 6px rgba(0, 0, 0, 0.45);
+    --well: none;
+    --well-bg: rgba(255, 255, 255, 0.045);
+    --well-border: rgba(255, 255, 255, 0.09);
+    --blur: 16px;
+    --blobs:
+      radial-gradient(560px 420px at 12% -8%, rgba(124, 92, 255, 0.42), transparent 65%),
+      radial-gradient(640px 480px at 88% 18%, rgba(56, 189, 248, 0.26), transparent 65%),
+      radial-gradient(700px 560px at 55% 115%, rgba(217, 70, 160, 0.24), transparent 65%);
+    --crit-low: #4ec98e;
+    --crit-medium: #e6b04a;
+    --crit-high: #f08a5c;
+    --crit-critical: #f0637f;
+    --haiku: #3cc9bf;
+    --sonnet: #8b98ff;
+    --opus: #b18cff;
+    --fable: #b18cff;
+  }
+  :root[data-skin="minimal"] {
+    --ground: #fcfcfd;
+    --panel: #ffffff;
+    --ink: #191c25;
+    --ink-soft: #878da0;
+    --accent: #2f5fe8;
+    --surface: #ffffff;
+    --surface-border: #e6e8ef;
+    --raise: 0 1px 2px rgba(20, 24, 40, 0.06);
+    --raise-sm: 0 1px 2px rgba(20, 24, 40, 0.05);
+    --press: inset 0 1px 2px rgba(20, 24, 40, 0.08);
+    --well: none;
+    --well-bg: #f5f6f9;
+    --well-border: #ebedf3;
+    --radius: 10px;
+    --radius-sm: 7px;
+    --chip-radius: 5px;
+    --chip-alpha: 10%;
+    --crit-low: #2e8f63;
+    --crit-medium: #b07a10;
+    --crit-high: #c25a2e;
+    --crit-critical: #c22f4d;
+    --haiku: #12857d;
+    --sonnet: #2f5fe8;
+    --opus: #7a48e8;
+    --fable-bg: #191c25;
+    --fable: #191c25;
+  }
+  :root[data-skin="maximal"] {
+    --ground: #1a0533;
+    --panel: #2b0a52;
+    --ink: #fff6e0;
+    --ink-soft: #d9b8ff;
+    --accent: #ffde38;
+    --surface: rgba(255, 255, 255, 0.09);
+    --surface-border: rgba(255, 222, 56, 0.45);
+    --border-w: 2px;
+    --raise: 0 12px 36px rgba(255, 0, 128, 0.3);
+    --raise-sm: 0 6px 18px rgba(255, 0, 128, 0.28);
+    --press: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+    --well: none;
+    --well-bg: rgba(255, 255, 255, 0.05);
+    --well-border: rgba(255, 122, 217, 0.35);
+    --blur: 8px;
+    --blobs:
+      radial-gradient(620px 460px at 8% -10%, rgba(255, 0, 128, 0.5), transparent 62%),
+      radial-gradient(560px 460px at 95% 8%, rgba(255, 222, 56, 0.3), transparent 60%),
+      radial-gradient(760px 600px at 50% 118%, rgba(56, 200, 255, 0.35), transparent 62%),
+      repeating-linear-gradient(135deg, transparent 0 26px, rgba(255, 255, 255, 0.035) 26px 28px);
+    --radius: 26px;
+    --radius-sm: 18px;
+    --chip-alpha: 26%;
+    --h-transform: uppercase;
+    --crit-low: #4dffa6;
+    --crit-medium: #ffde38;
+    --crit-high: #ff9b3d;
+    --crit-critical: #ff5c7a;
+    --haiku: #45f5e3;
+    --sonnet: #9db4ff;
+    --opus: #d59bff;
+    --fable-bg: linear-gradient(100deg, #ff5c7a, #ffde38 50%, #45f5e3);
+    --fable: #ff5c7a;
+  }
+  :root[data-skin="brutal"] {
+    --ground: #f3efe6;
+    --panel: #ffffff;
+    --ink: #111111;
+    --ink-soft: #555555;
+    --accent: #0000ee;
+    --surface: #ffffff;
+    --surface-border: #111111;
+    --border-w: 2px;
+    --raise: 5px 5px 0 #111111;
+    --raise-sm: 3px 3px 0 #111111;
+    --press: 1px 1px 0 #111111;
+    --well: none;
+    --well-bg: #ece7d9;
+    --well-border: #111111;
+    --radius: 0px;
+    --radius-sm: 0px;
+    --chip-radius: 0px;
+    --font: ui-monospace, "Cascadia Mono", "JetBrains Mono", monospace;
+    --h-transform: uppercase;
+    --chip-alpha: 22%;
+    --crit-low: #0a7a3d;
+    --crit-medium: #9a6a00;
+    --crit-high: #c43d00;
+    --crit-critical: #d0003c;
+    --haiku: #007a72;
+    --sonnet: #0000ee;
+    --opus: #6a1fd0;
+    --fable-bg: #111111;
+    --fable: #111111;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font: 15px/1.5 var(--font);
+    min-height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+  .blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: var(--blobs); }
+  .app { position: relative; z-index: 1; max-width: 1240px; margin: 0 auto; padding: 24px clamp(14px, 3vw, 36px) 48px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin-bottom: 16px; }
+  h1 { font-size: 1.35rem; font-weight: 750; letter-spacing: -0.01em; margin: 0; text-wrap: balance; text-transform: var(--h-transform); }
+  h1 small { display: block; font-size: 0.72rem; font-weight: 600; color: var(--ink-soft); letter-spacing: 0.09em; text-transform: uppercase; }
+  .spacer { flex: 1; }
+
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+  .stat {
+    background: var(--surface);
+    border: var(--border-w) solid var(--surface-border);
+    box-shadow: var(--raise-sm);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    min-width: 92px;
+  }
+  .stat b { display: block; font-size: 1.05rem; font-variant-numeric: tabular-nums; font-family: ui-monospace, "Cascadia Mono", monospace; }
+  .stat span { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }
+  .stat.warn b { color: var(--crit-critical); }
+
+  button, select, input[type="search"], input[type="number"] {
+    font: inherit;
+    color: var(--ink);
+  }
+  button, select.chrome {
+    background: var(--surface);
+    border: var(--border-w) solid var(--surface-border);
+    box-shadow: var(--raise-sm);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-radius: var(--radius-sm);
+    padding: 9px 16px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button:active { box-shadow: var(--press); }
+  button:disabled { opacity: 0.55; cursor: default; }
+  button:focus-visible, select:focus-visible, input:focus-visible, [draggable]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary { color: var(--accent); }
+  button.ghost { box-shadow: none; border-color: transparent; background: transparent; color: var(--ink-soft); padding: 2px 8px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  button.ghost:hover { color: var(--accent); }
+
+  .nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  button.tab { box-shadow: none; border: var(--border-w) solid transparent; background: transparent; color: var(--ink-soft); padding: 8px 15px; }
+  button.tab[aria-selected="true"] {
+    background: var(--surface);
+    border-color: var(--surface-border);
+    box-shadow: var(--press);
+    color: var(--accent);
+  }
+
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .toolbar input, .toolbar select {
+    background: var(--well-bg); border: 1px solid var(--well-border);
+    box-shadow: var(--well); border-radius: var(--radius-sm); padding: 8px 12px;
+  }
+  .toolbar input[type="search"] { flex: 1; min-width: 170px; }
+
+  .board { display: grid; grid-template-columns: repeat(4, minmax(230px, 1fr)); gap: 18px; overflow-x: auto; padding-bottom: 8px; }
+  @media (max-width: 980px) { .board { grid-template-columns: repeat(4, minmax(240px, 1fr)); } }
+
+  .col {
+    background: var(--well-bg);
+    border: var(--border-w) solid var(--well-border);
+    box-shadow: var(--well);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-radius: var(--radius);
+    padding: 14px;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    outline: 2px dashed transparent;
+    outline-offset: -6px;
+    transition: outline-color 0.15s;
+  }
+  .col.dragover { outline-color: var(--accent); }
+  .col h2 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft); margin: 0; display: flex; align-items: center; gap: 8px; }
+  .col h2 .count { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; margin-left: auto; }
+
+  .card {
+    background: var(--surface);
+    border: var(--border-w) solid var(--surface-border);
+    box-shadow: var(--raise);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-radius: var(--radius-sm);
+    padding: 13px 14px 12px;
+    cursor: grab;
+    position: relative;
+  }
+  .card { animation: pop 0.25s ease; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } }
+  .card.dragging { opacity: 0.45; }
+  .card h3 { margin: 0 0 4px; font-size: 0.92rem; font-weight: 650; line-height: 1.3; padding-right: 20px; text-wrap: balance; }
+  .card p { margin: 0 0 10px; font-size: 0.8rem; color: var(--ink-soft); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .card .del {
+    position: absolute; top: 8px; right: 8px;
+    padding: 0; width: 22px; height: 22px; line-height: 1;
+    border-radius: var(--chip-radius); box-shadow: none; border: none; background: transparent;
+    color: var(--ink-soft); font-size: 0.95rem;
+  }
+  .card .del:hover { color: var(--crit-critical); }
+
+  .prog { margin-top: 10px; }
+  .prog .track { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 15%, transparent); overflow: hidden; }
+  .prog .fill { height: 100%; border-radius: 0 3px 3px 0; background: var(--accent); transition: width 0.45s linear; }
+  .prog .lbl { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.66rem; color: var(--ink-soft); font-family: ui-monospace, "Cascadia Mono", monospace; font-variant-numeric: tabular-nums; }
+
+  .chip {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+    padding: 3px 9px; border-radius: var(--chip-radius);
+    background: color-mix(in srgb, var(--c) var(--chip-alpha), transparent);
+    border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+    color: var(--c);
+    white-space: nowrap;
+  }
+  .chip.tok { font-family: ui-monospace, "Cascadia Mono", monospace; font-variant-numeric: tabular-nums; --c: var(--ink-soft); }
+  .chip.fable { background: var(--fable-bg); border-color: transparent; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+
+  /* ---- Analytics ---- */
+  .tiles { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .tiles .stat { min-width: 132px; }
+  .budget-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; font-size: 0.8rem; color: var(--ink-soft); }
+  .budget-row input {
+    width: 90px; background: var(--well-bg); border: 1px solid var(--well-border);
+    box-shadow: var(--well); border-radius: var(--radius-sm); padding: 6px 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .budget-track { flex: 1; min-width: 140px; height: 10px; border-radius: 5px; background: var(--well-bg); border: 1px solid var(--well-border); overflow: hidden; }
+  .budget-fill { height: 100%; background: var(--accent); border-radius: 0 5px 5px 0; }
+  .budget-fill.over { background: var(--crit-critical); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--surface);
+    border: var(--border-w) solid var(--surface-border);
+    box-shadow: var(--raise-sm);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .panel h3 { margin: 0 0 14px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-soft); }
+  .bar-row { display: grid; grid-template-columns: 96px 1fr 76px; align-items: center; gap: 10px; font-size: 0.78rem; margin-bottom: 10px; }
+  .bar-row .name { display: flex; align-items: center; gap: 7px; overflow: hidden; white-space: nowrap; }
+  .bar-row .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .bar-row .val { text-align: right; font-family: ui-monospace, "Cascadia Mono", monospace; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+  .bar-track { height: 14px; border-radius: 4px; background: var(--well-bg); border: 1px solid var(--well-border); overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; transition: width 0.4s; }
+  .chartwrap { position: relative; }
+  .chartwrap svg { display: block; width: 100%; height: auto; }
+  .tip {
+    position: absolute; pointer-events: none; display: none; white-space: nowrap; z-index: 3;
+    background: var(--panel); border: 1px solid var(--surface-border); box-shadow: var(--raise-sm);
+    border-radius: var(--radius-sm); padding: 4px 9px; font-size: 0.7rem;
+    font-family: ui-monospace, "Cascadia Mono", monospace; font-variant-numeric: tabular-nums;
+  }
+  .empty { color: var(--ink-soft); font-size: 0.82rem; padding: 26px 10px; text-align: center; }
+
+  /* ---- Activity ---- */
+  .log { display: flex; flex-direction: column; gap: 8px; }
+  .log-item {
+    display: flex; gap: 12px; align-items: baseline; font-size: 0.8rem;
+    padding: 9px 13px; background: var(--well-bg); border: 1px solid var(--well-border);
+    box-shadow: var(--well); border-radius: var(--radius-sm);
+  }
+  .log-item time { font-family: ui-monospace, "Cascadia Mono", monospace; font-size: 0.66rem; color: var(--ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .log-item .m { flex: 1; min-width: 0; }
+
+  dialog {
+    background: var(--panel);
+    color: var(--ink);
+    border: var(--border-w) solid var(--surface-border);
+    border-radius: var(--radius);
+    box-shadow: var(--raise);
+    padding: 24px;
+    width: min(460px, 92vw);
+  }
+  dialog::backdrop { background: rgba(10, 12, 24, 0.45); backdrop-filter: blur(3px); }
+  dialog h2 { margin: 0 0 16px; font-size: 1.05rem; text-transform: var(--h-transform); }
+  dialog label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin: 12px 0 5px; }
+  dialog input, dialog textarea, dialog select {
+    width: 100%; font: inherit; color: var(--ink);
+    background: var(--well-bg); border: 1px solid var(--well-border);
+    box-shadow: var(--well); border-radius: var(--radius-sm); padding: 9px 12px;
+  }
+  dialog textarea { resize: vertical; min-height: 74px; }
+  dialog input:focus, dialog textarea:focus, dialog select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .preview {
+    margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm);
+    background: var(--well-bg); box-shadow: var(--well); border: 1px solid var(--well-border);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 0.8rem; color: var(--ink-soft);
+  }
+  .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+  #bdList { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; max-height: 250px; overflow-y: auto; }
+  .bd-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 11px;
+    background: var(--well-bg); border: 1px solid var(--well-border);
+    box-shadow: var(--well); border-radius: var(--radius-sm);
+  }
+  .bd-item .t { flex: 1; min-width: 0; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="blobs"></div>
+<div class="app">
+  <header>
+    <h1><small>Agent Ops</small>Mission Control</h1>
+    <select class="chrome" id="projSel" aria-label="Project"></select>
+    <button class="ghost" id="projAdd">+ Project</button>
+    <div class="spacer"></div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="nav">
+    <button class="tab" data-tab="board" aria-selected="true">Board</button>
+    <button class="tab" data-tab="analytics" aria-selected="false">Analytics</button>
+    <button class="tab" data-tab="activity" aria-selected="false">Activity</button>
+    <div class="spacer"></div>
+    <button class="primary" id="runBtn">▶ Run agents</button>
+    <button id="bdBtn">⚡ Breakdown</button>
+    <button class="primary" id="addBtn">+ New task</button>
+    <button class="ghost" id="exportBtn">Export</button>
+    <button class="ghost" id="importBtn">Import</button>
+    <select class="chrome" id="skinSel" aria-label="Theme">
+      <option value="clay">Clay · neumorphic</option>
+      <option value="glass">Glass · glassmorphic</option>
+      <option value="minimal">Minimal</option>
+      <option value="maximal">Maximal</option>
+      <option value="brutal">Brutalist</option>
+    </select>
+  </div>
+
+  <section id="tab-board">
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Search tasks…" aria-label="Search tasks">
+      <select id="fltModel" aria-label="Filter by agent"></select>
+      <select id="fltCrit" aria-label="Filter by criticality"></select>
+    </div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <section id="tab-analytics" hidden>
+    <div class="tiles" id="tiles"></div>
+    <div class="budget-row">
+      <label for="budget" style="margin:0">Budget</label>
+      $<input type="number" id="budget" min="0.01" step="0.01" aria-label="Budget in dollars">
+      <div class="budget-track"><div class="budget-fill" id="budgetFill" style="width:0%"></div></div>
+      <span id="budgetLbl"></span>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>Actual spend by model</h3><div id="chartModels"></div></div>
+      <div class="panel"><h3>Cumulative spend</h3><div class="chartwrap" id="chartSpend"></div></div>
+    </div>
+  </section>
+
+  <section id="tab-activity" hidden>
+    <div class="log" id="logList"></div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <h2 id="dlgTitle">New task</h2>
+  <form method="dialog" id="form">
+    <label for="fTitle">Title</label>
+    <input id="fTitle" required maxlength="120" autocomplete="off">
+    <label for="fDesc">Description</label>
+    <textarea id="fDesc" placeholder="What should the agent do? Longer briefs raise the token estimate."></textarea>
+    <div class="row2">
+      <div>
+        <label for="fType">Task type</label>
+        <select id="fType">
+          <option value="chore">Chore / ops</option>
+          <option value="review">Code review</option>
+          <option value="writing">Writing / docs</option>
+          <option value="research" selected>Research / analysis</option>
+          <option value="code">Code generation</option>
+        </select>
+      </div>
+      <div>
+        <label for="fCrit">Criticality</label>
+        <select id="fCrit">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+    </div>
+    <label for="fModel">Agent</label>
+    <select id="fModel">
+      <option value="auto" selected>Auto-route</option>
+      <option value="haiku">Haiku 4.5</option>
+      <option value="sonnet">Sonnet 5</option>
+      <option value="opus">Opus 4.8</option>
+      <option value="fable">Fable 5</option>
+    </select>
+    <div class="preview" id="preview"></div>
+    <div class="actions">
+      <button type="button" id="cancelBtn">Cancel</button>
+      <button type="submit" class="primary" value="ok" id="submitBtn">Add to backlog</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="bdlg">
+  <h2>Breakdown</h2>
+  <form method="dialog" id="bdForm">
+    <label for="bText">Natural-language brief</label>
+    <textarea id="bText" placeholder="Describe the work in plain English — one sentence per task parses best."></textarea>
+    <div id="bdList"></div>
+    <div class="actions">
+      <button type="button" id="bdCancel">Cancel</button>
+      <button type="submit" class="primary" id="bdAdd" disabled>Add 0 tasks</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="pdlg">
+  <h2>New project</h2>
+  <form method="dialog" id="pForm">
+    <label for="pName">Name</label>
+    <input id="pName" required maxlength="48" autocomplete="off">
+    <div class="actions">
+      <button type="button" id="pCancel">Cancel</button>
+      <button type="submit" class="primary" value="ok">Create</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  const COLS = [
+    ["backlog", "Backlog"],
+    ["assigned", "Assigned"],
+    ["running", "In flight"],
+    ["done", "Done"],
+  ];
+  const TYPES = { chore: 1.2, review: 2, writing: 3, research: 4, code: 6 };
+  const CRIT = ["low", "medium", "high", "critical"];
+  const MODELS = { // in/out = $/MTok (Claude API list pricing); tps = simulated tokens/sec
+    haiku:  { label: "Haiku 4.5", in: 1,  out: 5,  tps: 190 },
+    sonnet: { label: "Sonnet 5",  in: 3,  out: 15, tps: 120 },
+    opus:   { label: "Opus 4.8",  in: 5,  out: 25, tps: 75 },
+    fable:  { label: "Fable 5",   in: 10, out: 50, tps: 50 },
+  };
+
+  // ponytail: chars/4 heuristic; swap for a real tokenizer if estimates matter downstream
+  const estimate = (title, desc, type) => {
+    const input = Math.ceil((title.length + desc.length) / 4);
+    return 600 + input + Math.round(input * TYPES[type]);
+  };
+  const assign = (tokens, crit) => {
+    if (crit === "critical") return "fable";
+    if (crit === "high") return tokens > 80_000 ? "fable" : "opus";
+    if (crit === "medium") return tokens > 80_000 ? "opus" : "sonnet";
+    return tokens > 30_000 ? "sonnet" : "haiku";
+  };
+  const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(Math.round(n)));
+  const fmtUsd = (n) => (n >= 1 ? "$" + n.toFixed(2) : (n * 100).toFixed(1) + "¢");
+  const tfmt = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  // recover the input/output split that estimate() baked into tokens, price per model
+  const costOf = (tokens, type, model) => {
+    const m = TYPES[type], i = Math.max(0, (tokens - 600) / (1 + m)), p = MODELS[model];
+    return ((600 + i) * p.in + i * m * p.out) / 1e6;
+  };
+  const cost = (t, model = t.model) => costOf(t.tokens, t.type, model);
+
+  console.assert(assign(500, "critical") === "fable", "critical always gets Fable");
+  console.assert(assign(500, "low") === "haiku" && assign(40_000, "low") === "sonnet", "low tier splits on tokens");
+  console.assert(costOf(10_000, "code", "fable") > costOf(10_000, "code", "haiku"), "Fable costs more than Haiku");
+  console.assert(Math.abs(costOf(950, "research", "sonnet") - 0.00621) < 1e-4, "cost math");
+
+  // ---- State: multi-project, persisted ----
+  const KEY = "agent-board-v2";
+  const newProject = (name, tasks = []) => ({ name, tasks, log: [], history: [], budget: 10 });
+  const seed = () => [
+    ["Root-cause flaky payment webhook tests", "Retries mask a race between the mock clock and the retry queue. Trace the full flow, fix at the source, leave one regression test.", "research", "critical", "running"],
+    ["Migrate auth service to OAuth 2.1", "Replace the legacy session tokens with PKCE flow. Touches gateway, SDK, and the mobile client contract.", "code", "high", "assigned"],
+    ["Review PR #482: rate limiter", "Sliding-window limiter for the public API. Check the Redis Lua script for off-by-one at window boundaries.", "review", "medium", "backlog"],
+    ["Summarize Q2 incident postmortems", "Twelve postmortems in the wiki. One page: recurring causes, ranked, with links.", "writing", "low", "backlog"],
+    ["Rotate stale CI cache keys", "Nightly job. Bump the key prefix and confirm cold-build time stays under 9 minutes.", "chore", "low", "assigned"],
+  ].map(([title, desc, type, crit, col], i) => {
+    const tokens = estimate(title, desc, type);
+    return { id: "s" + i, title, desc, type, crit, col, tokens, model: assign(tokens, crit), override: false };
+  });
+
+  let state;
+  try { state = JSON.parse(localStorage.getItem(KEY)); } catch {}
+  if (!state || !state.projects || !state.projects[state.cur]) {
+    let old = null;
+    try { old = JSON.parse(localStorage.getItem("agent-board-v1")); } catch {}
+    const id = crypto.randomUUID();
+    state = { cur: id, projects: { [id]: newProject("Payments Platform", Array.isArray(old) && old.length ? old : seed()) } };
+  }
+  const cur = () => state.projects[state.cur];
+
+  // ---- Server sync: active when served by server.js; static/artifact hosting falls back to localStorage ----
+  const API = "/api/state";
+  let serverMode = false;
+  let syncTimer;
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+    if (serverMode) {
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => fetch(API, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state),
+      }).catch(() => {}), 800);
+    }
+  };
+  async function pullRemote() {
+    if (!location.protocol.startsWith("http")) return;
+    try {
+      const r = await fetch(API, { headers: { Accept: "application/json" } });
+      if (!r.ok || !(r.headers.get("content-type") || "").includes("json")) return;
+      serverMode = true;
+      const remote = await r.json();
+      if (remote && remote.projects && remote.projects[remote.cur]) {
+        state = remote;
+        renderProjects(); render();
+      } else {
+        save(); // first boot against an empty server: seed it with local state
+      }
+    } catch {}
+  }
+
+  const log = (kind, msg) => {
+    cur().log.unshift({ ts: Date.now(), kind, msg });
+    if (cur().log.length > 300) cur().log.length = 300; // ponytail: ring buffer; page it if audit trail must be complete
+  };
+
+  const spend = (p) =>
+    p.history.reduce((s, h) => s + costOf(h.actual, h.type, h.model), 0) +
+    p.tasks.filter((t) => t.col === "running" && t.actual).reduce((s, t) => s + costOf(t.burn || 0, t.type, t.model), 0);
+  console.assert(spend(newProject("x")) === 0, "empty project spends nothing");
+
+  // ---- Simulated agent workers ----
+  const WORKERS = 3;
+  let simOn = false;
+
+  function startTask(t) {
+    t.col = "running";
+    t.actual = Math.max(200, Math.round(t.tokens * (0.7 + Math.random() * 0.7)));
+    t.burn = 0;
+    t.ticks = Math.min(40, Math.max(8, Math.round(t.actual / (MODELS[t.model].tps * 2))));
+    log("start", `${MODELS[t.model].label} picked up “${t.title}”`);
+  }
+  function completeTask(t) {
+    t.col = "done";
+    t.burn = t.actual;
+    cur().history.push({ ts: Date.now(), model: t.model, type: t.type, crit: t.crit, est: t.tokens, actual: t.actual });
+    const d = Math.round(((t.actual - t.tokens) / t.tokens) * 100);
+    log("done", `“${t.title}” finished — ${fmt(t.actual)} tok, ${fmtUsd(costOf(t.actual, t.type, t.model))} (${d >= 0 ? "+" : ""}${d}% vs estimate)`);
+  }
+  function setSim(on) {
+    simOn = on;
+    const btn = document.getElementById("runBtn");
+    btn.textContent = on ? "⏸ Pause agents" : "▶ Run agents";
+  }
+  function tick() {
+    if (!simOn) return;
+    const p = cur();
+    let changed = false;
+    for (const t of p.tasks.filter((t) => t.col === "running")) {
+      if (!t.actual) { startTask(t); changed = true; continue; }
+      t.burn = Math.min(t.actual, (t.burn || 0) + (t.actual / t.ticks) * (0.6 + Math.random() * 0.8));
+      if (t.burn >= t.actual - 1) { completeTask(t); changed = true; }
+    }
+    if (spend(p) >= p.budget) {
+      setSim(false);
+      log("budget", `Budget guardrail hit (${fmtUsd(p.budget)}) — agents paused. Raise the budget in Analytics to resume.`);
+      changed = true;
+    }
+    if (simOn) {
+      let slots = WORKERS - p.tasks.filter((t) => t.col === "running").length;
+      while (slots-- > 0) {
+        const next = p.tasks
+          .filter((t) => t.col === "assigned")
+          .sort((a, b) => CRIT.indexOf(b.crit) - CRIT.indexOf(a.crit))[0];
+        if (!next) break;
+        startTask(next);
+        changed = true;
+      }
+    }
+    if (changed) save();
+    render();
+  }
+  setInterval(tick, 500);
+  document.getElementById("runBtn").onclick = () => { setSim(!simOn); render(); };
+
+  // ---- Rendering ----
+  const board = document.getElementById("board");
+  const statsEl = document.getElementById("stats");
+  let tab = "board";
+
+  function chip(text, colorVar, extra = "") {
+    const s = document.createElement("span");
+    s.className = "chip " + extra;
+    if (colorVar) s.style.setProperty("--c", `var(--${colorVar})`);
+    s.textContent = text;
+    return s;
+  }
+  const modelChip = (t) => chip(
+    MODELS[t.model].label + (t.override ? " ✎" : ""),
+    t.model === "fable" ? null : t.model,
+    t.model === "fable" ? "fable" : ""
+  );
+
+  function render() {
+    renderStats();
+    if (tab === "board") renderBoard();
+    else if (tab === "analytics") renderAnalytics();
+    else renderActivity();
+  }
+
+  function renderStats() {
+    const p = cur();
+    const open = p.tasks.filter((t) => t.col !== "done");
+    const total = open.reduce((s, t) => s + t.tokens, 0);
+    const est = open.reduce((s, t) => s + cost(t), 0);
+    const naive = open.reduce((s, t) => s + cost(t, "fable"), 0);
+    const saved = naive - est;
+    const rows = [
+      ["Open tasks", open.length],
+      ["Est. tokens", fmt(total)],
+      ["Est. cost", fmtUsd(est)],
+      ["Saved vs all-Fable", saved > 0 ? `${fmtUsd(saved)} · ${Math.round((saved / naive) * 100)}%` : "—"],
+    ];
+    if (spend(p) >= p.budget) rows.push(["Budget", "HIT", true]);
+    statsEl.replaceChildren(...rows.map(([label, val, warn]) => {
+      const d = document.createElement("div");
+      d.className = "stat" + (warn ? " warn" : "");
+      const b = document.createElement("b"); b.textContent = val;
+      const s = document.createElement("span"); s.textContent = label;
+      d.append(b, s);
+      return d;
+    }));
+  }
+
+  const q = document.getElementById("q");
+  const fltModel = document.getElementById("fltModel");
+  const fltCrit = document.getElementById("fltCrit");
+  fltModel.replaceChildren(new Option("All agents", "all"),
+    ...Object.entries(MODELS).map(([k, m]) => new Option(m.label, k)));
+  fltCrit.replaceChildren(new Option("All criticalities", "all"),
+    ...CRIT.map((c) => new Option(c[0].toUpperCase() + c.slice(1), c)));
+  [q, fltModel, fltCrit].forEach((el) => el.addEventListener("input", renderBoard));
+
+  const visible = (t) => {
+    const s = q.value.trim().toLowerCase();
+    return (!s || (t.title + " " + t.desc).toLowerCase().includes(s)) &&
+      (fltModel.value === "all" || t.model === fltModel.value) &&
+      (fltCrit.value === "all" || t.crit === fltCrit.value);
+  };
+
+  function renderBoard() {
+    board.replaceChildren(...COLS.map(([id, label]) => {
+      const col = document.createElement("section");
+      col.className = "col";
+      const inCol = cur().tasks.filter((t) => t.col === id && visible(t));
+      const h = document.createElement("h2");
+      h.textContent = label + " ";
+      if (id === "done" && inCol.length) {
+        const clear = document.createElement("button");
+        clear.className = "ghost"; clear.type = "button"; clear.textContent = "clear";
+        clear.onclick = () => { cur().tasks = cur().tasks.filter((t) => t.col !== "done"); save(); render(); };
+        h.append(clear);
+      }
+      const count = document.createElement("span");
+      count.className = "count"; count.textContent = inCol.length;
+      h.append(count);
+      col.append(h, ...inCol.map(cardEl));
+      col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("dragover"); });
+      col.addEventListener("dragleave", () => col.classList.remove("dragover"));
+      col.addEventListener("drop", (e) => {
+        e.preventDefault();
+        col.classList.remove("dragover");
+        const t = cur().tasks.find((t) => t.id === e.dataTransfer.getData("text/plain"));
+        if (t && t.col !== id) {
+          const from = t.col;
+          t.col = id;
+          if (id === "running" && !t.actual) startTask(t);
+          else if (id === "done" && from !== "done") { if (!t.actual) t.actual = t.tokens; completeTask(t); }
+          else if (id === "backlog" || id === "assigned") { t.actual = null; t.burn = 0; }
+          save(); render();
+        }
+      });
+      return col;
+    }));
+  }
+
+  function cardEl(t) {
+    const c = document.createElement("article");
+    c.className = "card";
+    c.draggable = true;
+    c.tabIndex = 0;
+    const h = document.createElement("h3"); h.textContent = t.title;
+    const p = document.createElement("p"); p.textContent = t.desc;
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    let tokChip;
+    if (t.col === "done" && t.actual) {
+      const d = Math.round(((t.actual - t.tokens) / t.tokens) * 100);
+      tokChip = chip(`${fmt(t.actual)} tok · ${fmtUsd(costOf(t.actual, t.type, t.model))} · ${d >= 0 ? "+" : ""}${d}%`, null, "tok");
+    } else {
+      tokChip = chip(`~${fmt(t.tokens)} tok · ${fmtUsd(cost(t))}`, null, "tok");
+    }
+    meta.append(chip(t.crit, "crit-" + t.crit), tokChip, modelChip(t));
+    const del = document.createElement("button");
+    del.className = "del"; del.textContent = "×"; del.ariaLabel = "Delete task";
+    del.onclick = (e) => { e.stopPropagation(); cur().tasks = cur().tasks.filter((x) => x.id !== t.id); save(); render(); };
+    c.append(del, h, ...(t.desc ? [p] : []), meta);
+    if (t.col === "running" && t.actual) {
+      const pr = document.createElement("div");
+      pr.className = "prog";
+      const pct = Math.round(((t.burn || 0) / t.actual) * 100);
+      pr.innerHTML = `<div class="track"><div class="fill" style="width:${pct}%"></div></div>
+        <div class="lbl"><span>${fmt(t.burn || 0)} / ${fmt(t.actual)} tok</span><span>${pct}%</span></div>`;
+      c.append(pr);
+    }
+    c.addEventListener("click", () => openDialog(t));
+    c.addEventListener("keydown", (e) => { if (e.key === "Enter") openDialog(t); });
+    c.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", t.id); c.classList.add("dragging"); });
+    c.addEventListener("dragend", () => c.classList.remove("dragging"));
+    return c;
+  }
+
+  // ---- Analytics ----
+  function renderAnalytics() {
+    const p = cur();
+    const total = spend(p);
+    const naive = p.history.reduce((s, h) => s + costOf(h.actual, h.type, "fable"), 0);
+    const actual = p.history.reduce((s, h) => s + costOf(h.actual, h.type, h.model), 0);
+    const saved = naive - actual;
+    const errs = p.history.map((h) => Math.abs(h.actual - h.est) / h.est);
+    const avgErr = errs.length ? Math.round((errs.reduce((a, b) => a + b, 0) / errs.length) * 100) : null;
+
+    document.getElementById("tiles").replaceChildren(
+      ...[["Total spend", fmtUsd(total)],
+          ["Saved vs all-Fable", p.history.length ? `${fmtUsd(saved)} · ${Math.round((saved / naive) * 100)}%` : "—"],
+          ["Est. accuracy", avgErr === null ? "—" : `±${avgErr}%`],
+          ["Tasks completed", p.history.length]]
+        .map(([label, val]) => {
+          const d = document.createElement("div");
+          d.className = "stat";
+          const b = document.createElement("b"); b.textContent = val;
+          const s = document.createElement("span"); s.textContent = label;
+          d.append(b, s);
+          return d;
+        })
+    );
+
+    const budgetIn = document.getElementById("budget");
+    if (document.activeElement !== budgetIn) budgetIn.value = p.budget.toFixed(2);
+    const pct = Math.min(100, (total / p.budget) * 100);
+    const fill = document.getElementById("budgetFill");
+    fill.style.width = pct + "%";
+    fill.classList.toggle("over", total >= p.budget);
+    document.getElementById("budgetLbl").textContent = `${fmtUsd(total)} of ${fmtUsd(p.budget)} used`;
+
+    renderModelBars(p);
+    renderSpendLine(p);
+  }
+  document.getElementById("budget").addEventListener("change", (e) => {
+    const v = parseFloat(e.target.value);
+    if (v > 0) { cur().budget = v; save(); render(); }
+  });
+
+  function renderModelBars(p) {
+    const el = document.getElementById("chartModels");
+    if (!p.history.length) { el.innerHTML = '<div class="empty">Run agents to see actual spend.</div>'; return; }
+    const byModel = Object.keys(MODELS).map((m) => [m,
+      p.history.filter((h) => h.model === m).reduce((s, h) => s + costOf(h.actual, h.type, m), 0)]);
+    const max = Math.max(...byModel.map(([, v]) => v), 1e-9);
+    el.replaceChildren(...byModel.map(([m, v]) => {
+      const row = document.createElement("div");
+      row.className = "bar-row";
+      row.innerHTML = `
+        <span class="name"><span class="dot" style="background:${m === "fable" ? "var(--fable-bg)" : `var(--${m})`}"></span>${MODELS[m].label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(v / max) * 100}%"></div></div>
+        <span class="val">${v ? fmtUsd(v) : "—"}</span>`;
+      return row;
+    }));
+  }
+
+  function renderSpendLine(p) {
+    const el = document.getElementById("chartSpend");
+    const pts = [];
+    let cum = 0;
+    [...p.history].sort((a, b) => a.ts - b.ts).forEach((h) => { cum += costOf(h.actual, h.type, h.model); pts.push({ ts: h.ts, v: cum }); });
+    if (pts.length < 2) { el.innerHTML = '<div class="empty">Complete two or more tasks to chart spend over time.</div>'; return; }
+    const W = 560, H = 170, PAD = 12, PR = 60;
+    const t0 = pts[0].ts, t1 = pts[pts.length - 1].ts || t0 + 1;
+    const vMax = pts[pts.length - 1].v;
+    const X = (ts) => PAD + ((ts - t0) / Math.max(1, t1 - t0)) * (W - PAD - PR);
+    const Y = (v) => H - PAD - (v / vMax) * (H - 2 * PAD);
+    const path = pts.map((pt, i) => `${i ? "L" : "M"}${X(pt.ts).toFixed(1)},${Y(pt.v).toFixed(1)}`).join(" ");
+    const grid = [0.25, 0.5, 0.75].map((g) =>
+      `<line x1="${PAD}" x2="${W - PR}" y1="${Y(vMax * g)}" y2="${Y(vMax * g)}" stroke="var(--well-border)" stroke-opacity="0.9" stroke-width="1"/>`).join("");
+    const last = pts[pts.length - 1];
+    el.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative spend over time, ending at ${fmtUsd(vMax)}">
+        ${grid}
+        <line x1="${PAD}" x2="${W - PR}" y1="${H - PAD}" y2="${H - PAD}" stroke="var(--ink-soft)" stroke-opacity="0.4" stroke-width="1"/>
+        <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+        <line id="xhair" x1="0" x2="0" y1="${PAD}" y2="${H - PAD}" stroke="var(--ink-soft)" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>
+        <circle cx="${X(last.ts)}" cy="${Y(last.v)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+        <text x="${X(last.ts) + 8}" y="${Y(last.v) + 4}" font-size="11" fill="var(--ink)" font-weight="700">${fmtUsd(last.v)}</text>
+      </svg>
+      <div class="tip" id="spendTip"></div>`;
+    const svg = el.querySelector("svg"), tip = el.querySelector("#spendTip"), xhair = el.querySelector("#xhair");
+    svg.addEventListener("mousemove", (e) => {
+      const r = svg.getBoundingClientRect();
+      const mx = ((e.clientX - r.left) / r.width) * W;
+      const pt = pts.reduce((a, b) => (Math.abs(X(b.ts) - mx) < Math.abs(X(a.ts) - mx) ? b : a));
+      xhair.setAttribute("x1", X(pt.ts)); xhair.setAttribute("x2", X(pt.ts));
+      xhair.setAttribute("visibility", "visible");
+      tip.style.display = "block";
+      tip.textContent = `${tfmt(pt.ts)} · ${fmtUsd(pt.v)}`;
+      tip.style.left = Math.min((X(pt.ts) / W) * r.width + 10, r.width - 110) + "px";
+      tip.style.top = (Y(pt.v) / H) * r.height - 30 + "px";
+    });
+    svg.addEventListener("mouseleave", () => { tip.style.display = "none"; xhair.setAttribute("visibility", "hidden"); });
+  }
+
+  // ---- Activity ----
+  const LOG_COLOR = { add: null, start: "sonnet", done: "crit-low", budget: "crit-critical", route: null };
+  function renderActivity() {
+    const el = document.getElementById("logList");
+    if (!cur().log.length) { el.innerHTML = '<div class="empty">No activity yet. Add tasks and press “Run agents”.</div>'; return; }
+    el.replaceChildren(...cur().log.map((e) => {
+      const row = document.createElement("div");
+      row.className = "log-item";
+      const time = document.createElement("time"); time.textContent = tfmt(e.ts);
+      const m = document.createElement("span"); m.className = "m"; m.textContent = e.msg;
+      row.append(time, chip(e.kind, LOG_COLOR[e.kind]), m);
+      return row;
+    }));
+  }
+
+  // ---- Tabs ----
+  document.querySelectorAll(".tab").forEach((btn) => btn.addEventListener("click", () => {
+    tab = btn.dataset.tab;
+    document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", b === btn));
+    document.getElementById("tab-board").hidden = tab !== "board";
+    document.getElementById("tab-analytics").hidden = tab !== "analytics";
+    document.getElementById("tab-activity").hidden = tab !== "activity";
+    render();
+  }));
+
+  // ---- Task dialog (create + edit) ----
+  const dlg = document.getElementById("dlg");
+  const form = document.getElementById("form");
+  const [fTitle, fDesc, fType, fCrit, fModel] =
+    ["fTitle", "fDesc", "fType", "fCrit", "fModel"].map((id) => document.getElementById(id));
+  const preview = document.getElementById("preview");
+  let editing = null;
+
+  function updatePreview() {
+    const tokens = estimate(fTitle.value, fDesc.value, fType.value);
+    const auto = assign(tokens, fCrit.value);
+    fModel.options[0].textContent = "Auto-route → " + MODELS[auto].label;
+    const model = fModel.value === "auto" ? auto : fModel.value;
+    preview.replaceChildren(
+      document.createTextNode("Estimate "),
+      chip(`~${fmt(tokens)} tok · ${fmtUsd(costOf(tokens, fType.value, model))}`, null, "tok"),
+      document.createTextNode(fModel.value === "auto" ? " → routed to " : " → pinned to "),
+      chip(MODELS[model].label, model === "fable" ? null : model, model === "fable" ? "fable" : "")
+    );
+  }
+
+  function openDialog(t = null) {
+    editing = t;
+    form.reset();
+    document.getElementById("dlgTitle").textContent = t ? "Edit task" : "New task";
+    document.getElementById("submitBtn").textContent = t ? "Save" : "Add to backlog";
+    if (t) {
+      fTitle.value = t.title; fDesc.value = t.desc;
+      fType.value = t.type; fCrit.value = t.crit;
+      fModel.value = t.override ? t.model : "auto";
+    }
+    updatePreview();
+    dlg.showModal();
+  }
+
+  form.addEventListener("input", updatePreview);
+  document.getElementById("addBtn").onclick = () => openDialog();
+  document.getElementById("cancelBtn").onclick = () => dlg.close("cancel");
+  form.addEventListener("submit", () => {
+    if (!fTitle.value.trim()) return;
+    const tokens = estimate(fTitle.value, fDesc.value, fType.value);
+    const override = fModel.value !== "auto";
+    const patch = {
+      title: fTitle.value.trim(),
+      desc: fDesc.value.trim(),
+      type: fType.value,
+      crit: fCrit.value,
+      tokens,
+      override,
+      model: override ? fModel.value : assign(tokens, fCrit.value),
+    };
+    if (editing) Object.assign(editing, patch);
+    else {
+      cur().tasks.push({ id: crypto.randomUUID(), col: "backlog", ...patch });
+      log("add", `“${patch.title}” added — routed to ${MODELS[patch.model].label}`);
+    }
+    save(); render();
+  });
+
+  // ---- Natural-language breakdown ----
+  // ponytail: keyword heuristic; swap for an LLM call when the board is wired to an API
+  function breakdown(text) {
+    return text
+      .split(/\n+|(?<=[.!?])\s+|;\s*/)
+      .map((s) => s.replace(/^[\s*\-\d.)]+/, "").trim())
+      .filter((s) => s.length > 8)
+      .map((f) => {
+        const type =
+          /\b(review|audit)\b/i.test(f) ? "review" :
+          /\b(write|draft|document|docs|summar|changelog|blog)/i.test(f) ? "writing" :
+          /\b(investigate|debug|research|analy|root.?cause|why|explore|profile)/i.test(f) ? "research" :
+          /\b(build|implement|add|create|refactor|migrate|fix|endpoint|api|ship)\b/i.test(f) ? "code" :
+          "chore";
+        const crit =
+          /\b(critical|urgent|outage|down|asap|security|breach|data.?loss)\b/i.test(f) ? "critical" :
+          /\b(important|high.?priority|prod(uction)?|payment|auth|billing)\b/i.test(f) ? "high" :
+          /\b(minor|low|cleanup|clean.?up|stale|nice.to.have|tidy)\b/i.test(f) ? "low" :
+          "medium";
+        const title = f.length > 72 ? f.slice(0, 69).trimEnd() + "…" : f;
+        const tokens = estimate(title, f, type);
+        return { title, desc: f, type, crit, tokens, model: assign(tokens, crit) };
+      });
+  }
+  console.assert(breakdown("Fix the prod outage now, urgent. Review PR #12 for style.").length === 2, "brief splits into tasks");
+  console.assert(breakdown("Fix the outage, urgent!")[0].model === "fable", "urgent brief routes to Fable");
+
+  const bdlg = document.getElementById("bdlg");
+  const bText = document.getElementById("bText");
+  const bdList = document.getElementById("bdList");
+  const bdAdd = document.getElementById("bdAdd");
+  let parsed = [];
+
+  function updateBreakdown() {
+    parsed = breakdown(bText.value);
+    bdList.replaceChildren(...parsed.map((t) => {
+      const row = document.createElement("div");
+      row.className = "bd-item";
+      const title = document.createElement("span");
+      title.className = "t"; title.textContent = t.title;
+      row.append(title, chip(t.crit, "crit-" + t.crit), chip("~" + fmt(t.tokens) + " tok", null, "tok"),
+        chip(MODELS[t.model].label, t.model === "fable" ? null : t.model, t.model === "fable" ? "fable" : ""));
+      return row;
+    }));
+    bdAdd.disabled = !parsed.length;
+    bdAdd.textContent = `Add ${parsed.length} task${parsed.length === 1 ? "" : "s"}`;
+  }
+  bText.addEventListener("input", updateBreakdown);
+  document.getElementById("bdBtn").onclick = () => { bText.value = ""; updateBreakdown(); bdlg.showModal(); };
+  document.getElementById("bdCancel").onclick = () => bdlg.close("cancel");
+  document.getElementById("bdForm").addEventListener("submit", () => {
+    parsed.forEach((t) => {
+      cur().tasks.push({ id: crypto.randomUUID(), col: "backlog", override: false, ...t });
+      log("add", `“${t.title}” added — routed to ${MODELS[t.model].label}`);
+    });
+    save(); render();
+  });
+
+  // ---- Projects ----
+  const projSel = document.getElementById("projSel");
+  function renderProjects() {
+    projSel.replaceChildren(...Object.entries(state.projects).map(([id, p]) => {
+      const o = new Option(p.name, id);
+      o.selected = id === state.cur;
+      return o;
+    }));
+  }
+  projSel.onchange = () => { state.cur = projSel.value; setSim(false); save(); render(); };
+  const pdlg = document.getElementById("pdlg");
+  const pName = document.getElementById("pName");
+  document.getElementById("projAdd").onclick = () => { pName.value = ""; pdlg.showModal(); };
+  document.getElementById("pCancel").onclick = () => pdlg.close("cancel");
+  document.getElementById("pForm").addEventListener("submit", () => {
+    if (!pName.value.trim()) return;
+    const id = crypto.randomUUID();
+    state.projects[id] = newProject(pName.value.trim());
+    state.cur = id;
+    setSim(false);
+    save(); renderProjects(); render();
+  });
+  // ponytail: no project rename/delete; add when someone actually asks
+
+  // ---- Export / import ----
+  document.getElementById("exportBtn").onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(cur(), null, 2)], { type: "application/json" }));
+    a.download = cur().name.toLowerCase().replace(/\W+/g, "-") + ".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  const validTask = (t) => t && t.id && t.title && MODELS[t.model] && TYPES[t.type] && Number.isFinite(t.tokens);
+  document.getElementById("importBtn").onclick = () => {
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = ".json,application/json";
+    inp.onchange = () => inp.files[0]?.text().then((txt) => {
+      const data = JSON.parse(txt);
+      const tasks = (Array.isArray(data) ? data : data.tasks || [])
+        .filter(validTask)
+        .map((t) => ({ override: false, desc: "", crit: "medium", ...t,
+          col: COLS.some(([id]) => id === t.col) ? t.col : "backlog" }));
+      if (!tasks.length && !Array.isArray(data) && !data.name) throw new Error();
+      const id = crypto.randomUUID();
+      state.projects[id] = {
+        ...newProject(data.name || "Imported project", tasks),
+        history: Array.isArray(data.history) ? data.history : [],
+        log: Array.isArray(data.log) ? data.log.slice(0, 300) : [],
+        budget: data.budget > 0 ? data.budget : 10,
+      };
+      state.cur = id;
+      setSim(false);
+      save(); renderProjects(); render();
+    }).catch(() => alert("Not a valid board export."));
+    inp.click();
+  };
+
+  // ---- Skin picker ----
+  const skinSel = document.getElementById("skinSel");
+  const setSkin = (s) => {
+    document.documentElement.dataset.skin = s;
+    skinSel.value = s;
+    try { localStorage.setItem(KEY + "-skin", s); } catch {}
+  };
+  setSkin(localStorage.getItem(KEY + "-skin") || localStorage.getItem("agent-board-v1-skin") ||
+    (matchMedia("(prefers-color-scheme: dark)").matches ? "glass" : "clay"));
+  skinSel.onchange = () => setSkin(skinSel.value);
+
+  renderProjects();
+  render();
+  pullRemote();
+</script>

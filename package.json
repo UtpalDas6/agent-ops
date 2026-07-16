@@ -1,0 +1,15 @@
+{
+  "name": "agent-ops",
+  "version": "1.0.0",
+  "description": "Agent Ops Mission Control — kanban for LLM agent fleets with cost-aware model routing, live execution tracking, budget guardrails, and spend analytics.",
+  "type": "module",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}
