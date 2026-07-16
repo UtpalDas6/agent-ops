@@ -7,6 +7,8 @@ falls back to localStorage when opened statically, so the artifact deploy
 below still works unchanged.
 
 Run locally: `npm start` → http://127.0.0.1:3000. Tests: `npm test`.
+Repo: https://github.com/UtpalDas6/agent-ops (private). `gh` CLI is at
+`~/.local/bin/gh`.
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Claude artifact (claude.ai hosting)
