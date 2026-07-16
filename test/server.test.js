@@ -66,3 +66,25 @@ test("unknown routes 404", async () => {
   const r = await fetch(`${base}/api/nope`);
   assert.equal(r.status, 404);
 });
+
+test("run rejects unknown model", async () => {
+  const r = await fetch(`${base}/api/run`, {
+    method: "POST",
+    body: JSON.stringify({ id: "t1", title: "x", model: "gpt-5", cwd: tmpdir() }),
+  });
+  assert.equal(r.status, 400);
+});
+
+test("run rejects a workspace that is not a directory", async () => {
+  const r = await fetch(`${base}/api/run`, {
+    method: "POST",
+    body: JSON.stringify({ id: "t1", title: "x", model: "haiku", cwd: "/definitely/not/here" }),
+  });
+  assert.equal(r.status, 400);
+  assert.match((await r.json()).error, /workspace/);
+});
+
+test("run status 404s for unknown task", async () => {
+  const r = await fetch(`${base}/api/run/never-dispatched`);
+  assert.equal(r.status, 404);
+});

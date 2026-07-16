@@ -279,6 +279,8 @@
   .prog { margin-top: 10px; }
   .prog .track { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 15%, transparent); overflow: hidden; }
   .prog .fill { height: 100%; border-radius: 0 3px 3px 0; background: var(--accent); transition: width 0.45s linear; }
+  .prog .fill.pulse { animation: pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
   .prog .lbl { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.66rem; color: var(--ink-soft); font-family: ui-monospace, "Cascadia Mono", monospace; font-variant-numeric: tabular-nums; }
 
   .chip {
@@ -427,6 +429,12 @@
       <div class="budget-track"><div class="budget-fill" id="budgetFill" style="width:0%"></div></div>
       <span id="budgetLbl"></span>
     </div>
+    <div class="budget-row">
+      <label for="wsInput" style="margin:0">Workspace</label>
+      <input type="text" id="wsInput" style="flex:1;width:auto"
+        placeholder="/absolute/path — agents run Claude Code here for real (blank = simulation)">
+      <span id="wsHint"></span>
+    </div>
     <div class="grid2">
       <div class="panel"><h3>Actual spend by model</h3><div id="chartModels"></div></div>
       <div class="panel"><h3>Cumulative spend</h3><div class="chartwrap" id="chartSpend"></div></div>
@@ -552,7 +560,7 @@
 
   // ---- State: multi-project, persisted ----
   const KEY = "agent-board-v2";
-  const newProject = (name, tasks = []) => ({ name, tasks, log: [], history: [], budget: 10 });
+  const newProject = (name, tasks = []) => ({ name, tasks, log: [], history: [], budget: 10, workspace: "" });
   const seed = () => [
     ["Root-cause flaky payment webhook tests", "Retries mask a race between the mock clock and the retry queue. Trace the full flow, fix at the source, leave one regression test.", "research", "critical", "running"],
     ["Migrate auth service to OAuth 2.1", "Replace the legacy session tokens with PKCE flow. Touches gateway, SDK, and the mobile client contract.", "code", "high", "assigned"],
@@ -610,21 +618,76 @@
     if (cur().log.length > 300) cur().log.length = 300; // ponytail: ring buffer; page it if audit trail must be complete
   };
 
+  const histCost = (h) => (h.usd != null ? h.usd : costOf(h.actual, h.type, h.model));
   const spend = (p) =>
-    p.history.reduce((s, h) => s + costOf(h.actual, h.type, h.model), 0) +
+    p.history.reduce((s, h) => s + histCost(h), 0) +
     p.tasks.filter((t) => t.col === "running" && t.actual).reduce((s, t) => s + costOf(t.burn || 0, t.type, t.model), 0);
   console.assert(spend(newProject("x")) === 0, "empty project spends nothing");
+  console.assert(histCost({ usd: 0.02, actual: 1, type: "chore", model: "haiku" }) === 0.02, "real cost wins over estimate");
 
-  // ---- Simulated agent workers ----
+  // ---- Agent workers: simulated by default; real Claude Code runs when a workspace is set ----
   const WORKERS = 3;
+  const REAL_WORKERS = 2; // must match the server's MAX_CONCURRENT_RUNS
   let simOn = false;
+  const realMode = () => serverMode && !!cur().workspace;
 
   function startTask(t) {
+    if (realMode()) return startRealTask(t);
     t.col = "running";
     t.actual = Math.max(200, Math.round(t.tokens * (0.7 + Math.random() * 0.7)));
     t.burn = 0;
     t.ticks = Math.min(40, Math.max(8, Math.round(t.actual / (MODELS[t.model].tps * 2))));
     log("start", `${MODELS[t.model].label} picked up “${t.title}”`);
+  }
+
+  function startRealTask(t) {
+    t.col = "running";
+    t.real = true;
+    t.actual = null;
+    t.burn = 0;
+    t.startedAt = Date.now();
+    t.lastPoll = 0;
+    fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: t.id, title: t.title, desc: t.desc, model: t.model, cwd: cur().workspace }),
+    }).then(async (r) => {
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
+      log("start", `${MODELS[t.model].label} (live) picked up “${t.title}”`);
+      save(); render();
+    }).catch((e) => {
+      t.col = "assigned"; t.real = false;
+      log("error", `Could not dispatch “${t.title}” — ${e.message}`);
+      save(); render();
+    });
+  }
+
+  async function pollRun(t) {
+    t.polling = true;
+    t.lastPoll = Date.now();
+    try {
+      const r = await fetch("/api/run/" + encodeURIComponent(t.id));
+      if (r.status === 404) { // server restarted mid-run; run state was in memory
+        t.col = "assigned"; t.real = false;
+        log("error", `“${t.title}” lost after a server restart — re-queued`);
+        save(); render();
+        return;
+      }
+      if (!r.ok) return;
+      const run = await r.json();
+      if (run.status === "done") {
+        t.col = "done";
+        t.actual = run.tokens || t.tokens;
+        t.burn = t.actual;
+        cur().history.push({ ts: Date.now(), model: t.model, type: t.type, crit: t.crit, est: t.tokens, actual: t.actual, usd: run.usd });
+        log("done", `“${t.title}” finished live — ${fmt(t.actual)} tok, ${fmtUsd(run.usd != null ? run.usd : costOf(t.actual, t.type, t.model))}${run.summary ? " — " + run.summary.slice(0, 140) : ""}`);
+        save(); render();
+      } else if (run.status === "error") {
+        t.col = "assigned"; t.real = false;
+        log("error", `“${t.title}” failed — ${run.error || "unknown error"}`);
+        save(); render();
+      }
+    } catch {} finally { t.polling = false; }
   }
   function completeTask(t) {
     t.col = "done";
@@ -636,13 +699,17 @@
   function setSim(on) {
     simOn = on;
     const btn = document.getElementById("runBtn");
-    btn.textContent = on ? "⏸ Pause agents" : "▶ Run agents";
+    btn.textContent = on ? "⏸ Pause agents" : (realMode() ? "▶ Run agents (live)" : "▶ Run agents");
   }
   function tick() {
     if (!simOn) return;
     const p = cur();
     let changed = false;
     for (const t of p.tasks.filter((t) => t.col === "running")) {
+      if (t.real) {
+        if (!t.polling && Date.now() - (t.lastPoll || 0) > 2000) pollRun(t);
+        continue;
+      }
       if (!t.actual) { startTask(t); changed = true; continue; }
       t.burn = Math.min(t.actual, (t.burn || 0) + (t.actual / t.ticks) * (0.6 + Math.random() * 0.8));
       if (t.burn >= t.actual - 1) { completeTask(t); changed = true; }
@@ -653,7 +720,7 @@
       changed = true;
     }
     if (simOn) {
-      let slots = WORKERS - p.tasks.filter((t) => t.col === "running").length;
+      let slots = (realMode() ? REAL_WORKERS : WORKERS) - p.tasks.filter((t) => t.col === "running").length;
       while (slots-- > 0) {
         const next = p.tasks
           .filter((t) => t.col === "assigned")
@@ -762,7 +829,7 @@
           t.col = id;
           if (id === "running" && !t.actual) startTask(t);
           else if (id === "done" && from !== "done") { if (!t.actual) t.actual = t.tokens; completeTask(t); }
-          else if (id === "backlog" || id === "assigned") { t.actual = null; t.burn = 0; }
+          else if (id === "backlog" || id === "assigned") { t.actual = null; t.burn = 0; t.real = false; }
           save(); render();
         }
       });
@@ -791,7 +858,13 @@
     del.className = "del"; del.textContent = "×"; del.ariaLabel = "Delete task";
     del.onclick = (e) => { e.stopPropagation(); cur().tasks = cur().tasks.filter((x) => x.id !== t.id); save(); render(); };
     c.append(del, h, ...(t.desc ? [p] : []), meta);
-    if (t.col === "running" && t.actual) {
+    if (t.col === "running" && t.real) {
+      const pr = document.createElement("div");
+      pr.className = "prog";
+      pr.innerHTML = `<div class="track"><div class="fill pulse" style="width:100%"></div></div>
+        <div class="lbl"><span>live on ${MODELS[t.model].label}</span><span>${Math.round((Date.now() - (t.startedAt || Date.now())) / 1000)}s</span></div>`;
+      c.append(pr);
+    } else if (t.col === "running" && t.actual) {
       const pr = document.createElement("div");
       pr.className = "prog";
       const pct = Math.round(((t.burn || 0) / t.actual) * 100);
@@ -811,7 +884,7 @@
     const p = cur();
     const total = spend(p);
     const naive = p.history.reduce((s, h) => s + costOf(h.actual, h.type, "fable"), 0);
-    const actual = p.history.reduce((s, h) => s + costOf(h.actual, h.type, h.model), 0);
+    const actual = p.history.reduce((s, h) => s + histCost(h), 0);
     const saved = naive - actual;
     const errs = p.history.map((h) => Math.abs(h.actual - h.est) / h.est);
     const avgErr = errs.length ? Math.round((errs.reduce((a, b) => a + b, 0) / errs.length) * 100) : null;
@@ -833,6 +906,10 @@
 
     const budgetIn = document.getElementById("budget");
     if (document.activeElement !== budgetIn) budgetIn.value = p.budget.toFixed(2);
+    const wsIn = document.getElementById("wsInput");
+    if (document.activeElement !== wsIn) wsIn.value = p.workspace || "";
+    document.getElementById("wsHint").textContent =
+      realMode() ? "⚡ live agent runs (real API spend)" : (p.workspace ? "server offline — simulating" : "");
     const pct = Math.min(100, (total / p.budget) * 100);
     const fill = document.getElementById("budgetFill");
     fill.style.width = pct + "%";
@@ -846,12 +923,16 @@
     const v = parseFloat(e.target.value);
     if (v > 0) { cur().budget = v; save(); render(); }
   });
+  document.getElementById("wsInput").addEventListener("change", (e) => {
+    cur().workspace = e.target.value.trim();
+    save(); render();
+  });
 
   function renderModelBars(p) {
     const el = document.getElementById("chartModels");
     if (!p.history.length) { el.innerHTML = '<div class="empty">Run agents to see actual spend.</div>'; return; }
     const byModel = Object.keys(MODELS).map((m) => [m,
-      p.history.filter((h) => h.model === m).reduce((s, h) => s + costOf(h.actual, h.type, m), 0)]);
+      p.history.filter((h) => h.model === m).reduce((s, h) => s + histCost(h), 0)]);
     const max = Math.max(...byModel.map(([, v]) => v), 1e-9);
     el.replaceChildren(...byModel.map(([m, v]) => {
       const row = document.createElement("div");
@@ -868,7 +949,7 @@
     const el = document.getElementById("chartSpend");
     const pts = [];
     let cum = 0;
-    [...p.history].sort((a, b) => a.ts - b.ts).forEach((h) => { cum += costOf(h.actual, h.type, h.model); pts.push({ ts: h.ts, v: cum }); });
+    [...p.history].sort((a, b) => a.ts - b.ts).forEach((h) => { cum += histCost(h); pts.push({ ts: h.ts, v: cum }); });
     if (pts.length < 2) { el.innerHTML = '<div class="empty">Complete two or more tasks to chart spend over time.</div>'; return; }
     const W = 560, H = 170, PAD = 12, PR = 60;
     const t0 = pts[0].ts, t1 = pts[pts.length - 1].ts || t0 + 1;
@@ -905,7 +986,7 @@
   }
 
   // ---- Activity ----
-  const LOG_COLOR = { add: null, start: "sonnet", done: "crit-low", budget: "crit-critical", route: null };
+  const LOG_COLOR = { add: null, start: "sonnet", done: "crit-low", budget: "crit-critical", error: "crit-critical", route: null };
   function renderActivity() {
     const el = document.getElementById("logList");
     if (!cur().log.length) { el.innerHTML = '<div class="empty">No activity yet. Add tasks and press “Run agents”.</div>'; return; }

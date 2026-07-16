@@ -62,20 +62,35 @@ use, and the server-backed install are the same file.
 
 ### API
 
-| Method | Path          | Description                              |
-|--------|---------------|------------------------------------------|
-| GET    | `/`           | The app                                   |
-| GET    | `/api/health` | Liveness probe                            |
-| GET    | `/api/state`  | Full board state (JSON, `null` if empty)  |
-| PUT    | `/api/state`  | Replace board state (validated, 2MB cap) |
+| Method | Path           | Description                              |
+|--------|----------------|-------------------------------------------|
+| GET    | `/`            | The app                                    |
+| GET    | `/api/health`  | Liveness probe                             |
+| GET    | `/api/state`   | Full board state (JSON, `null` if empty)   |
+| PUT    | `/api/state`   | Replace board state (validated, 2MB cap)  |
+| POST   | `/api/run`     | Dispatch a task to Claude Code (live run)  |
+| GET    | `/api/run/:id` | Live-run status: tokens, cost, summary     |
+
+## Live agent execution
+
+Set a **Workspace** directory on a project (Analytics tab). From then on,
+tasks entering "In flight" are executed for real: the server spawns
+[Claude Code](https://claude.com/claude-code) headless in that directory with
+the routed model (`claude -p … --model … --permission-mode acceptEdits`), and
+completion books the *actual* token count and dollar cost reported by the
+CLI. The budget guardrail then controls real spend.
+
+Requires the `claude` CLI installed and authenticated on the host. Leave the
+workspace blank to stay in simulation mode (the default; also what the
+Docker image does unless you bake the CLI in). Point the workspace at a
+git-tracked directory — git is the undo button for agent edits.
 
 ## Roadmap
 
 1. **Auth + multi-user** — SSO, per-user boards, roles; split the state
    document into per-entity endpoints with optimistic concurrency.
-2. **Real agent execution** — swap the simulation engine for the Claude API:
-   the routing table already maps criticality → model; the worker pool
-   becomes a queue of real API calls with live token usage from `usage`.
+2. **Streaming run progress** — live token usage mid-run
+   (`--output-format stream-json`) instead of completion-only.
 3. **Postgres option** for horizontal scale; SQLite remains the
    single-node default.
 4. **Slack/Jira integrations** — mirror tasks and completions.
