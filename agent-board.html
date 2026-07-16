@@ -265,6 +265,7 @@
   .card { animation: pop 0.25s ease; }
   @keyframes pop { from { opacity: 0; transform: translateY(6px); } }
   .card.dragging { opacity: 0.45; }
+  .card.running { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -2px; }
   .card h3 { margin: 0 0 4px; font-size: 0.92rem; font-weight: 650; line-height: 1.3; padding-right: 20px; text-wrap: balance; }
   .card p { margin: 0 0 10px; font-size: 0.8rem; color: var(--ink-soft); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .card .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -732,9 +733,36 @@
         changed = true;
       }
     }
-    if (changed) save();
-    render();
+    if (simOn && !p.tasks.some((t) => t.col === "assigned" || t.col === "running")) {
+      setSim(false);
+      log("done", "No open agent work — agents stopped.");
+      changed = true;
+    }
+    if (changed) { save(); render(); }
+    else if (tab === "board") updateProgress();
+    else if (tab === "analytics") renderAnalytics();
   }
+  // Update in-flight cards in place between structural changes, so the rest of
+  // the board doesn't re-render (and replay its entry animation) every tick.
+  function updateProgress() {
+    for (const t of cur().tasks.filter((t) => t.col === "running")) {
+      const card = board.querySelector(`[data-id="${t.id}"]`);
+      if (!card) continue;
+      const lbl = card.querySelector(".lbl");
+      if (t.real) {
+        if (lbl) lbl.lastElementChild.textContent = Math.round((Date.now() - (t.startedAt || Date.now())) / 1000) + "s";
+      } else if (t.actual) {
+        const pct = Math.round(((t.burn || 0) / t.actual) * 100);
+        const fill = card.querySelector(".fill");
+        if (fill) fill.style.width = pct + "%";
+        if (lbl) {
+          lbl.firstElementChild.textContent = `${fmt(t.burn || 0)} / ${fmt(t.actual)} tok`;
+          lbl.lastElementChild.textContent = pct + "%";
+        }
+      }
+    }
+  }
+
   setInterval(tick, 500);
   document.getElementById("runBtn").onclick = () => { setSim(!simOn); render(); };
 
@@ -841,7 +869,8 @@
 
   function cardEl(t) {
     const c = document.createElement("article");
-    c.className = "card";
+    c.className = "card" + (t.col === "running" ? " running" : "");
+    c.dataset.id = t.id;
     c.draggable = true;
     c.tabIndex = 0;
     const h = document.createElement("h3"); h.textContent = t.title;
