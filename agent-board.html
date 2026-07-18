@@ -1,21 +1,22 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent Ops Board</title>
 <style>
   /* ---- Skins: every visual decision routes through these tokens ---- */
-  :root { /* clay (neumorphism) */
-    --ground: #e3e7f1;
-    --panel: #e3e7f1;
-    --ink: #39415a;
-    --ink-soft: #7a83a0;
-    --accent: #5b6cff;
-    --surface: #e3e7f1;
+  :root { /* clay (neumorphism, dark) */
+    --ground: #262b38;
+    --panel: #262b38;
+    --ink: #c9cee2;
+    --ink-soft: #7c839c;
+    --accent: #7b88f5;
+    --surface: #262b38;
     --surface-border: transparent;
     --border-w: 1px;
-    --raise: 8px 8px 16px #c3c8d8, -8px -8px 16px #ffffff;
-    --raise-sm: 4px 4px 9px #c3c8d8, -4px -4px 9px #ffffff;
-    --press: inset 4px 4px 8px #c3c8d8, inset -4px -4px 8px #ffffff;
-    --well: inset 6px 6px 14px #c9cedd, inset -6px -6px 14px #ffffff;
-    --well-bg: #e3e7f1;
+    --raise: 8px 8px 16px #14171f, -8px -8px 16px #323a4c;
+    --raise-sm: 4px 4px 9px #14171f, -4px -4px 9px #323a4c;
+    --press: inset 4px 4px 8px #14171f, inset -4px -4px 8px #323a4c;
+    --well: inset 6px 6px 14px #14171f, inset -6px -6px 14px #2e3547;
+    --well-bg: #262b38;
     --well-border: transparent;
     --blur: 0px;
     --blobs: none;
@@ -24,16 +25,16 @@
     --chip-radius: 999px;
     --font: system-ui, -apple-system, "Segoe UI", sans-serif;
     --h-transform: none;
-    --chip-alpha: 16%;
-    --crit-low: #3f9e6e;
-    --crit-medium: #c98a1b;
-    --crit-high: #d96a3b;
-    --crit-critical: #cf3f5b;
-    --haiku: #1f9d94;
-    --sonnet: #5b6cff;
-    --opus: #8f5bff;
-    --fable-bg: linear-gradient(100deg, #7c5cff, #d946a0 55%, #38bdf8);
-    --fable: #7c5cff;
+    --chip-alpha: 20%;
+    --crit-low: #4caf7c;
+    --crit-medium: #d9a13c;
+    --crit-high: #e2825a;
+    --crit-critical: #e15b74;
+    --haiku: #35b6ac;
+    --sonnet: #7b88f5;
+    --opus: #a480ff;
+    --fable-bg: linear-gradient(100deg, #8f72ff, #e06bb0 55%, #4fd1f0);
+    --fable: #8f72ff;
   }
   :root[data-skin="glass"] {
     --ground: #0d1120;
@@ -64,32 +65,32 @@
     --fable: #b18cff;
   }
   :root[data-skin="minimal"] {
-    --ground: #fcfcfd;
-    --panel: #ffffff;
-    --ink: #191c25;
-    --ink-soft: #878da0;
-    --accent: #2f5fe8;
-    --surface: #ffffff;
-    --surface-border: #e6e8ef;
-    --raise: 0 1px 2px rgba(20, 24, 40, 0.06);
-    --raise-sm: 0 1px 2px rgba(20, 24, 40, 0.05);
-    --press: inset 0 1px 2px rgba(20, 24, 40, 0.08);
+    --ground: #16181f;
+    --panel: #1c1f28;
+    --ink: #e4e6ee;
+    --ink-soft: #8991a8;
+    --accent: #6690ff;
+    --surface: #1c1f28;
+    --surface-border: #2a2e3a;
+    --raise: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --raise-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --press: inset 0 1px 2px rgba(0, 0, 0, 0.5);
     --well: none;
-    --well-bg: #f5f6f9;
-    --well-border: #ebedf3;
+    --well-bg: #14161c;
+    --well-border: #262a35;
     --radius: 10px;
     --radius-sm: 7px;
     --chip-radius: 5px;
-    --chip-alpha: 10%;
-    --crit-low: #2e8f63;
-    --crit-medium: #b07a10;
-    --crit-high: #c25a2e;
-    --crit-critical: #c22f4d;
-    --haiku: #12857d;
-    --sonnet: #2f5fe8;
-    --opus: #7a48e8;
-    --fable-bg: #191c25;
-    --fable: #191c25;
+    --chip-alpha: 16%;
+    --crit-low: #3fb37e;
+    --crit-medium: #d9a13c;
+    --crit-high: #e2825a;
+    --crit-critical: #f0546f;
+    --haiku: #2bc0b3;
+    --sonnet: #6690ff;
+    --opus: #9a72ff;
+    --fable-bg: #e4e6ee;
+    --fable: #e4e6ee;
   }
   :root[data-skin="maximal"] {
     --ground: #1a0533;
@@ -127,35 +128,35 @@
     --fable: #ff5c7a;
   }
   :root[data-skin="brutal"] {
-    --ground: #f3efe6;
-    --panel: #ffffff;
-    --ink: #111111;
-    --ink-soft: #555555;
-    --accent: #0000ee;
-    --surface: #ffffff;
-    --surface-border: #111111;
+    --ground: #121212;
+    --panel: #1a1a1a;
+    --ink: #f3efe6;
+    --ink-soft: #a8a8a8;
+    --accent: #ffcc00;
+    --surface: #1a1a1a;
+    --surface-border: #f3efe6;
     --border-w: 2px;
-    --raise: 5px 5px 0 #111111;
-    --raise-sm: 3px 3px 0 #111111;
-    --press: 1px 1px 0 #111111;
+    --raise: 5px 5px 0 #f3efe6;
+    --raise-sm: 3px 3px 0 #f3efe6;
+    --press: 1px 1px 0 #f3efe6;
     --well: none;
-    --well-bg: #ece7d9;
-    --well-border: #111111;
+    --well-bg: #0d0d0d;
+    --well-border: #f3efe6;
     --radius: 0px;
     --radius-sm: 0px;
     --chip-radius: 0px;
     --font: ui-monospace, "Cascadia Mono", "JetBrains Mono", monospace;
     --h-transform: uppercase;
-    --chip-alpha: 22%;
-    --crit-low: #0a7a3d;
-    --crit-medium: #9a6a00;
-    --crit-high: #c43d00;
-    --crit-critical: #d0003c;
-    --haiku: #007a72;
-    --sonnet: #0000ee;
-    --opus: #6a1fd0;
-    --fable-bg: #111111;
-    --fable: #111111;
+    --chip-alpha: 26%;
+    --crit-low: #2ecc71;
+    --crit-medium: #ffb020;
+    --crit-high: #ff7043;
+    --crit-critical: #ff3b5c;
+    --haiku: #26c9be;
+    --sonnet: #ffcc00;
+    --opus: #b388ff;
+    --fable-bg: #f3efe6;
+    --fable: #f3efe6;
   }
 
   * { box-sizing: border-box; }
