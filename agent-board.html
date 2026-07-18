@@ -230,7 +230,8 @@
   .toolbar input[type="search"] { flex: 1; min-width: 170px; }
 
   .board { display: grid; grid-template-columns: repeat(4, minmax(230px, 1fr)); gap: 18px; overflow-x: auto; padding-bottom: 8px; }
-  @media (max-width: 980px) { .board { grid-template-columns: repeat(4, minmax(240px, 1fr)); } }
+  @media (max-width: 980px) { .board { grid-template-columns: repeat(2, minmax(220px, 1fr)); } }
+  @media (max-width: 560px) { .board { grid-template-columns: 1fr; overflow-x: visible; } }
 
   .col {
     background: var(--well-bg);
@@ -270,6 +271,13 @@
   .card h3 { margin: 0 0 4px; font-size: 0.92rem; font-weight: 650; line-height: 1.3; padding-right: 20px; text-wrap: balance; }
   .card p { margin: 0 0 10px; font-size: 0.8rem; color: var(--ink-soft); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .card .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .card .movegrp { display: flex; gap: 4px; margin-left: auto; }
+  .card .move {
+    padding: 0; width: 26px; height: 26px; line-height: 1; font-size: 0.95rem; font-weight: 700;
+    border-radius: var(--chip-radius); box-shadow: none; border: 1px solid var(--surface-border);
+    background: var(--well-bg); color: var(--ink-soft);
+  }
+  .card .move:disabled { opacity: 0.25; cursor: default; }
   .card .del {
     position: absolute; top: 8px; right: 8px;
     padding: 0; width: 22px; height: 22px; line-height: 1;
@@ -366,6 +374,7 @@
   dialog textarea { resize: vertical; min-height: 74px; }
   dialog input:focus, dialog textarea:focus, dialog select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 420px) { .row2 { grid-template-columns: 1fr; } }
   .preview {
     margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm);
     background: var(--well-bg); box-shadow: var(--well); border: 1px solid var(--well-border);
@@ -700,6 +709,16 @@
     const d = Math.round(((t.actual - t.tokens) / t.tokens) * 100);
     log("done", `“${t.title}” finished — ${fmt(t.actual)} tok, ${fmtUsd(costOf(t.actual, t.type, t.model))} (${d >= 0 ? "+" : ""}${d}% vs estimate)`);
   }
+  // Shared by drag-and-drop and the tap-to-move buttons (native HTML5 DnD doesn't fire on touch).
+  function moveTask(t, id) {
+    if (t.col === id) return;
+    const from = t.col;
+    t.col = id;
+    if (id === "running") startTask(t); // (re)dispatch even if it already has a prior `actual` from a completed run
+    else if (id === "done" && from !== "done") { if (!t.actual) t.actual = t.tokens; completeTask(t); }
+    else if (id === "backlog" || id === "assigned") { t.actual = null; t.burn = 0; t.real = false; }
+    save(); render();
+  }
   function setSim(on) {
     simOn = on;
     const btn = document.getElementById("runBtn");
@@ -855,14 +874,7 @@
         e.preventDefault();
         col.classList.remove("dragover");
         const t = cur().tasks.find((t) => t.id === e.dataTransfer.getData("text/plain"));
-        if (t && t.col !== id) {
-          const from = t.col;
-          t.col = id;
-          if (id === "running" && !t.actual) startTask(t);
-          else if (id === "done" && from !== "done") { if (!t.actual) t.actual = t.tokens; completeTask(t); }
-          else if (id === "backlog" || id === "assigned") { t.actual = null; t.burn = 0; t.real = false; }
-          save(); render();
-        }
+        if (t) moveTask(t, id);
       });
       return col;
     }));
@@ -886,15 +898,31 @@
       tokChip = chip(`~${fmt(t.tokens)} tok · ${fmtUsd(cost(t))}`, null, "tok");
     }
     meta.append(chip(t.crit, "crit-" + t.crit), tokChip, modelChip(t));
+    const colIdx = COLS.findIndex(([cid]) => cid === t.col);
+    const moveGrp = document.createElement("div");
+    moveGrp.className = "movegrp";
+    const prevBtn = document.createElement("button");
+    prevBtn.className = "move"; prevBtn.type = "button"; prevBtn.textContent = "‹";
+    prevBtn.disabled = colIdx <= 0;
+    prevBtn.ariaLabel = colIdx > 0 ? `Move to ${COLS[colIdx - 1][1]}` : "";
+    prevBtn.onclick = (e) => { e.stopPropagation(); moveTask(t, COLS[colIdx - 1][0]); };
+    const nextBtn = document.createElement("button");
+    nextBtn.className = "move"; nextBtn.type = "button"; nextBtn.textContent = "›";
+    nextBtn.disabled = colIdx >= COLS.length - 1;
+    nextBtn.ariaLabel = colIdx < COLS.length - 1 ? `Move to ${COLS[colIdx + 1][1]}` : "";
+    nextBtn.onclick = (e) => { e.stopPropagation(); moveTask(t, COLS[colIdx + 1][0]); };
+    moveGrp.append(prevBtn, nextBtn);
+    meta.append(moveGrp);
     const del = document.createElement("button");
     del.className = "del"; del.textContent = "×"; del.ariaLabel = "Delete task";
     del.onclick = (e) => { e.stopPropagation(); cur().tasks = cur().tasks.filter((x) => x.id !== t.id); save(); render(); };
     c.append(del, h, ...(t.desc ? [p] : []), meta);
     if (t.col === "running" && t.real) {
+      const pct = livePct(t);
       const pr = document.createElement("div");
       pr.className = "prog";
-      pr.innerHTML = `<div class="track"><div class="fill pulse" style="width:100%"></div></div>
-        <div class="lbl"><span>live on ${MODELS[t.model].label}</span><span>${Math.round((Date.now() - (t.startedAt || Date.now())) / 1000)}s</span></div>`;
+      pr.innerHTML = `<div class="track"><div class="fill pulse" style="width:${pct}%"></div></div>
+        <div class="lbl"><span>live on ${MODELS[t.model].label}</span><span>${pct}%</span></div>`;
       c.append(pr);
     } else if (t.col === "running" && t.actual) {
       const pr = document.createElement("div");
