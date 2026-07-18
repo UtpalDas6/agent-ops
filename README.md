@@ -11,10 +11,9 @@ answers all three on one board.
 
 ## Demo
 
-<video src="https://github.com/UtpalDas6/agent-ops/releases/download/media-assets/walkthrough-voiceover.mp4" controls width="720">
-  Your browser doesn't support inline video —
-  <a href="https://github.com/UtpalDas6/agent-ops/releases/download/media-assets/walkthrough-voiceover.mp4">download the walkthrough</a> instead.
-</video>
+![Agent Ops walkthrough](assets/demo.gif)
+
+<a href="https://github.com/UtpalDas6/agent-ops/releases/download/media-assets/walkthrough-voiceover.mp4">Watch with voiceover</a> instead.
 
 ## Features
 
