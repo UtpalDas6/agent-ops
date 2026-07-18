@@ -87,6 +87,17 @@ export function start({
       }
     }
 
+    if (pathname === "/api/workspace" && req.method === "POST") {
+      const body = await readJson(req, res);
+      if (body === undefined) return;
+      const { id, name = "" } = body;
+      if (!id || typeof id !== "string") return json(res, 400, { error: "id required" });
+      const slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "project";
+      const dir = path.join(dataDir, "outputs", `${slug}-${id.slice(0, 8)}`);
+      mkdirSync(dir, { recursive: true });
+      return json(res, 200, { path: dir });
+    }
+
     if (pathname === "/api/plan" && req.method === "POST") {
       const body = await readJson(req, res);
       if (body === undefined) return;

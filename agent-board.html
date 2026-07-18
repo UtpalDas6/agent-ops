@@ -444,6 +444,7 @@
       <label for="wsInput" style="margin:0">Workspace</label>
       <input type="text" id="wsInput" style="flex:1;width:auto"
         placeholder="/absolute/path — agents run Claude Code here for real (blank = simulation)">
+      <button type="button" id="wsAuto">📁 Use project folder</button>
       <span id="wsHint"></span>
     </div>
     <div class="grid2">
@@ -986,6 +987,25 @@
   document.getElementById("wsInput").addEventListener("change", (e) => {
     cur().workspace = e.target.value.trim();
     save(); render();
+  });
+  document.getElementById("wsAuto").addEventListener("click", async (e) => {
+    const btn = e.target;
+    btn.disabled = true;
+    try {
+      const r = await fetch("/api/workspace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: state.cur, name: cur().name }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
+      cur().workspace = (await r.json()).path;
+      save(); render();
+    } catch (err) {
+      log("error", `Could not create project folder — ${err.message}`);
+      save(); render();
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   function renderModelBars(p) {
