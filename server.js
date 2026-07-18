@@ -123,7 +123,9 @@ ${brief}`;
         clearTimeout(timer);
         try {
           const r = JSON.parse(out);
-          const text = String(r.result || "").trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
+          // Haiku is asked for bare JSON but sometimes wraps it in fences or a stray
+          // sentence anyway; grab the outermost [...] rather than assume clean output.
+          const text = String(r.result || "").match(/\[[\s\S]*\]/)?.[0] || "";
           const TYPE_SET = ["chore", "review", "writing", "research", "code"];
           const CRIT_SET = ["low", "medium", "high", "critical"];
           const tasks = (JSON.parse(text) || [])
@@ -136,7 +138,8 @@ ${brief}`;
             .filter((t) => t.title);
           if (!tasks.length) return respond(502, { error: "planner returned no tasks" });
           respond(200, { tasks, usd: r.total_cost_usd });
-        } catch {
+        } catch (e) {
+          console.error(`${new Date().toISOString()} /api/plan parse failure: ${e.message}\nraw output: ${out.slice(0, 2000)}`);
           respond(502, { error: "planner output was not parseable" });
         }
       });
