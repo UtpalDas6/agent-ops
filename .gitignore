@@ -1,6 +1,7 @@
 node_modules/
 data/
 *.mp4
+!assets/*.mp4
 .DS_Store
 .gstack/
 .claude/
