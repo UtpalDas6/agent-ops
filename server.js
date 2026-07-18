@@ -146,7 +146,7 @@ ${brief}`;
     if (pathname === "/api/run" && req.method === "POST") {
       const body = await readJson(req, res);
       if (body === undefined) return;
-      const { id, title = "", desc = "", model, cwd } = body;
+      const { id, title = "", desc = "", model, cwd, est } = body;
       if (!id || typeof id !== "string" || !MODEL_IDS[model]) {
         return json(res, 400, { error: "id and a known model are required" });
       }
@@ -157,17 +157,46 @@ ${brief}`;
       const active = [...runs.values()].filter((r) => r.status === "running").length;
       if (active >= MAX_CONCURRENT_RUNS) return json(res, 429, { error: "worker slots full" });
 
-      const run = { status: "running", startedAt: Date.now() };
+      const run = { status: "running", startedAt: Date.now(), est: Number(est) || 0, tokensSoFar: 0 };
       runs.set(id, run);
       const prompt = `${title}\n\n${desc}`.trim();
+      // stream-json (requires --verbose in -p mode) delivers per-message usage
+      // while the agent works, so clients can show live progress.
       const child = spawn("claude",
-        ["-p", prompt, "--model", MODEL_IDS[model], "--permission-mode", "acceptEdits", "--output-format", "json",
+        ["-p", prompt, "--model", MODEL_IDS[model], "--permission-mode", "acceptEdits",
+         "--output-format", "stream-json", "--verbose",
          "--append-system-prompt",
          "You are executing a task from the Agent Ops board. Deliver your work as files in the current working directory — create or edit files rather than only answering in text. Reply with a one-sentence summary of what you created or changed."],
         { cwd, env: RUN_ENV, stdio: ["ignore", "pipe", "pipe"] });
-      let out = "";
+      let buf = "";
       let errOut = "";
-      child.stdout.on("data", (c) => { out += c; });
+      const finalize = (r) => {
+        Object.assign(run, {
+          status: r.is_error ? "error" : "done",
+          tokens: (r.usage?.input_tokens || 0) + (r.usage?.output_tokens || 0),
+          usd: r.total_cost_usd,
+          summary: String(r.result || "").slice(0, 500),
+          error: r.is_error ? String(r.result || "agent reported an error").slice(0, 300) : undefined,
+        });
+        console.log(`${new Date().toISOString()} run ${id} ${run.status}${run.usd != null ? ` $${run.usd.toFixed(4)}` : ""}`);
+      };
+      child.stdout.on("data", (c) => {
+        buf += c;
+        let nl;
+        while ((nl = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line) continue;
+          try {
+            const ev = JSON.parse(line);
+            if (ev.type === "assistant" && ev.message?.usage) {
+              run.tokensSoFar += (ev.message.usage.input_tokens || 0) + (ev.message.usage.output_tokens || 0);
+            } else if (ev.type === "result") {
+              finalize(ev);
+            }
+          } catch {}
+        }
+      });
       child.stderr.on("data", (c) => { errOut += c; });
       const timer = setTimeout(() => child.kill("SIGKILL"), RUN_TIMEOUT_MS);
       child.on("error", (e) => {
@@ -176,20 +205,10 @@ ${brief}`;
       });
       child.on("close", (code) => {
         clearTimeout(timer);
-        if (run.status === "error") return;
-        try {
-          const r = JSON.parse(out);
-          Object.assign(run, {
-            status: r.is_error ? "error" : "done",
-            tokens: (r.usage?.input_tokens || 0) + (r.usage?.output_tokens || 0),
-            usd: r.total_cost_usd,
-            summary: String(r.result || "").slice(0, 500),
-            error: r.is_error ? String(r.result || "agent reported an error").slice(0, 300) : undefined,
-          });
-        } catch {
+        if (run.status === "running") { // no result event arrived — crash, kill, or timeout
           Object.assign(run, { status: "error", error: (errOut.trim() || `claude exited with code ${code}`).slice(0, 300) });
+          console.log(`${new Date().toISOString()} run ${id} error (no result event)`);
         }
-        console.log(`${new Date().toISOString()} run ${id} ${run.status}${run.usd != null ? ` $${run.usd.toFixed(4)}` : ""}`);
       });
       return json(res, 202, { id, status: "running" });
     }

@@ -664,7 +664,7 @@
     fetch("/api/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: t.id, title: t.title, desc: t.desc, model: t.model, cwd: cur().workspace }),
+      body: JSON.stringify({ id: t.id, title: t.title, desc: t.desc, model: t.model, cwd: cur().workspace, est: t.tokens }),
     }).then(async (r) => {
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
       log("start", `${MODELS[t.model].label} (live) picked up “${t.title}”`);
@@ -689,7 +689,9 @@
       }
       if (!r.ok) return;
       const run = await r.json();
-      if (run.status === "done") {
+      if (run.status === "running") {
+        t.burn = run.tokensSoFar || 0; // updateProgress paints it in place next tick
+      } else if (run.status === "done") {
         t.col = "done";
         t.actual = run.tokens || t.tokens;
         t.burn = t.actual;
@@ -763,6 +765,12 @@
     else if (tab === "board") updateProgress();
     else if (tab === "analytics") renderAnalytics();
   }
+  // Progress against the token estimate; a live run can overshoot it, so hold
+  // at 99% until the run actually reports done.
+  const livePct = (t) => Math.min(99, Math.round(((t.burn || 0) / Math.max(t.tokens, 1)) * 100));
+  console.assert(livePct({ burn: 500, tokens: 1000 }) === 50, "live percent");
+  console.assert(livePct({ burn: 5000, tokens: 1000 }) === 99, "live percent caps at 99");
+
   // Update in-flight cards in place between structural changes, so the rest of
   // the board doesn't re-render (and replay its entry animation) every tick.
   function updateProgress() {
@@ -771,7 +779,10 @@
       if (!card) continue;
       const lbl = card.querySelector(".lbl");
       if (t.real) {
-        if (lbl) lbl.lastElementChild.textContent = Math.round((Date.now() - (t.startedAt || Date.now())) / 1000) + "s";
+        const pct = livePct(t);
+        const fill = card.querySelector(".fill");
+        if (fill) fill.style.width = pct + "%";
+        if (lbl) lbl.lastElementChild.textContent = pct + "%";
       } else if (t.actual) {
         const pct = Math.round(((t.burn || 0) / t.actual) * 100);
         const fill = card.querySelector(".fill");
@@ -971,6 +982,7 @@
     if (document.activeElement !== wsIn) wsIn.value = p.workspace || "";
     document.getElementById("wsHint").textContent =
       realMode() ? "⚡ live agent runs (real API spend)" : (p.workspace ? "server offline — simulating" : "");
+    document.getElementById("wsAuto").disabled = !serverMode;
     const pct = Math.min(100, (total / p.budget) * 100);
     const fill = document.getElementById("budgetFill");
     fill.style.width = pct + "%";
