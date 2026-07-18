@@ -9,6 +9,13 @@ Teams adopting AI agents hit the same wall: nobody knows what agent work
 costs, which model each task deserves, or when the bill runs away. Agent Ops
 answers all three on one board.
 
+## Demo
+
+<video src="https://github.com/UtpalDas6/agent-ops/releases/download/media-assets/walkthrough-voiceover.mp4" controls width="720">
+  Your browser doesn't support inline video —
+  <a href="https://github.com/UtpalDas6/agent-ops/releases/download/media-assets/walkthrough-voiceover.mp4">download the walkthrough</a> instead.
+</video>
+
 ## Features
 
 - **Cost-aware model routing** — each task is estimated in tokens and priced
